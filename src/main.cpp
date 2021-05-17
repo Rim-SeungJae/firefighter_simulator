@@ -11,19 +11,8 @@
 static const char*	window_name = "cgbase - trackball";
 static const char*	vert_shader_path = "../bin/shaders/trackball.vert";
 static const char*	frag_shader_path = "../bin/shaders/trackball.frag";
-static const char*  sun_image_path = "../bin/images/sunmap.jpg";
-static const char*	moon_image_path = "../bin/images/moonmap.jpg";
-static const char*	image_path_1 = "../bin/images/mercurymap.jpg";
-static const char*	image_path_2 = "../bin/images/venusmap.jpg";
-static const char*	image_path_3 = "../bin/images/earthmap.jpg";
-static const char*	image_path_4 = "../bin/images/marsmap.jpg";
-static const char*	image_path_5 = "../bin/images/jupitermap.jpg";
-static const char*	image_path_6 = "../bin/images/saturnmap.jpg";
-static const char*	image_path_7 = "../bin/images/uranusmap.jpg";
-static const char*	image_path_8 = "../bin/images/neptunemap.jpg";
-static const char*	ring_image_path = "../bin/images/saturnringcolor.jpg";
-static const char*	ring_a_path = "../bin/images/saturnringpattern.gif";
-static const char* bump_path = "../bin/images/earthbump.jpg";
+static const char*  character_image_path = "../bin/images/character.jpg";
+static const char*	floor_image_path = "../bin/images/floor.jpg";
 
 struct light_t
 {
@@ -52,19 +41,8 @@ GLuint	program	= 0;	// ID holder for GPU program
 GLuint	vertex_array = 0;	// ID holder for vertex array object
 GLuint	ring_vertex_array = 0;
 GLuint	vertex_array_square = 0;
-GLuint	SUN = 0;
-GLuint	MOON = 0;
-GLuint	RING = 0;
-GLuint	RING_a = 0;
-GLuint	BUMP = 0;
-GLuint	p1 = 0;
-GLuint	p2 = 0;
-GLuint	p3 = 0;
-GLuint	p4 = 0;
-GLuint	p5 = 0;
-GLuint	p6 = 0;
-GLuint	p7 = 0;
-GLuint	p8 = 0;
+GLuint	CHARACTER = 0;
+GLuint	FLOOR = 0;
 
 //*************************************
 // global variables
@@ -244,27 +222,61 @@ void render()
 	}
 	*/
 	glBindVertexArray(vertex_array_square);
-
+	
 	for (auto& f : floors)
 	{
 		f.update();
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, FLOOR);
+		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
 
 		GLint uloc;
 		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, f.model_matrix);
 
 		// per-circle draw calls
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
 	}
+	
 
 	for (auto& c : characters)
 	{
-		c.update();
+		c.update(dt);
+		vec3 n = (cam.eye - cam.at).normalize();
+		vec3 u = cam.up.cross(n).normalize();
+		vec3 v = n.cross(u).normalize();
+
+		vec2 p1 = vec2(0.0f, 0.0f);
+		if (characters[0].move_up)
+		{
+			p1.y -= characters[0].velocity * dt;
+		}
+		if (characters[0].move_down)
+		{
+			p1.y += characters[0].velocity * dt;
+		}
+		if (characters[0].move_left)
+		{
+			p1.x += characters[0].velocity * dt;
+		}
+		if (characters[0].move_right)
+		{
+			p1.x -= characters[0].velocity * dt;
+		}
+
+		cam.eye = cam.eye - u * p1.x - v * p1.y;
+		cam.at = cam.at - u * p1.x - v * p1.y;
+		cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, CHARACTER);
+		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
 
 		GLint uloc;
 		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
 
 		// per-circle draw calls
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
 	}
 
 	// swap front and back buffers, and display to screen
@@ -433,6 +445,10 @@ std::vector<vertex> create_square_vertices()
 	v.push_back({ vec3(+1.0f, -1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 0.0f) });
 	v.push_back({ vec3(+1.0f, +1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 1.0f) });
 	v.push_back({ vec3(-1.0f, +1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 1.0f) });
+	v.push_back({ vec3(-1.0f, -1.0f, 0.0f), vec3(0.0f, 0.0f, -1.0f), vec2(0.0f, 0.0f) });
+	v.push_back({ vec3(+1.0f, -1.0f, 0.0f), vec3(0.0f, 0.0f, -1.0f), vec2(1.0f, 0.0f) });
+	v.push_back({ vec3(+1.0f, +1.0f, 0.0f), vec3(0.0f, 0.0f, -1.0f), vec2(1.0f, 1.0f) });
+	v.push_back({ vec3(-1.0f, +1.0f, 0.0f), vec3(0.0f, 0.0f, -1.0f), vec2(0.0f, 1.0f) });
 	return v;
 }
 
@@ -458,6 +474,12 @@ void update_vertex_buffer_square(const std::vector<vertex>& vertices)
 	indices.push_back(0);
 	indices.push_back(2);
 	indices.push_back(3);
+	indices.push_back(4);
+	indices.push_back(6);
+	indices.push_back(5);
+	indices.push_back(4);
+	indices.push_back(7);
+	indices.push_back(6);
 
 	// generation of vertex buffer: use vertices as it is
 	glGenBuffers(1, &vertex_buffer);
@@ -497,6 +519,43 @@ void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 		{
 			b_rotate = !b_rotate;
 			printf("> rotate %s\n", b_rotate ? "start" : "stop");
+		}
+		else if (key == GLFW_KEY_RIGHT)
+		{
+			characters[0].look_right = true;
+			characters[0].move_right = true;
+		}
+		else if (key == GLFW_KEY_LEFT)
+		{
+			characters[0].look_right = false;
+			characters[0].move_left = true;
+		}
+		else if (key == GLFW_KEY_DOWN)
+		{
+			characters[0].move_down = true;
+		}
+		else if (key == GLFW_KEY_UP)
+		{
+			characters[0].move_up = true;
+		}
+	}
+	else if (action == GLFW_RELEASE)
+	{
+		if (key == GLFW_KEY_RIGHT)
+		{
+			characters[0].move_right = false;
+		}
+		else if (key == GLFW_KEY_LEFT)
+		{
+			characters[0].move_left = false;
+		}
+		else if (key == GLFW_KEY_DOWN)
+		{
+			characters[0].move_down = false;
+		}
+		else if (key == GLFW_KEY_UP)
+		{
+			characters[0].move_up = false;
 		}
 	}
 }
@@ -555,19 +614,8 @@ bool user_init()
 	update_ring_vertex_buffer(unit_ring_vertices);
 
 	// load texture
-	SUN = cg_create_texture(sun_image_path, true); if (!SUN) return false;
-	MOON = cg_create_texture(moon_image_path, true); if (!MOON) return false;
-	RING = cg_create_texture(ring_image_path, true); if (!RING) return false;
-	RING_a = cg_create_texture(ring_a_path, true); if (!RING_a) return false;
-	BUMP = cg_create_texture(bump_path, true); if (!BUMP) return false;
-	p1 = cg_create_texture(image_path_1, true); if (!p1) return false;
-	p2 = cg_create_texture(image_path_2, true); if (!p2) return false;
-	p3 = cg_create_texture(image_path_3, true); if (!p3) return false;
-	p4 = cg_create_texture(image_path_4, true); if (!p4) return false;
-	p5 = cg_create_texture(image_path_5, true); if (!p5) return false;
-	p6 = cg_create_texture(image_path_6, true); if (!p6) return false;
-	p7 = cg_create_texture(image_path_7, true); if (!p7) return false;
-	p8 = cg_create_texture(image_path_8, true); if (!p8) return false;
+	FLOOR = cg_create_texture(floor_image_path, true); if (!FLOOR) return false;
+	CHARACTER = cg_create_texture(character_image_path, true); if (!CHARACTER) return false;
 
 	return true;
 }
@@ -583,78 +631,7 @@ int main( int argc, char* argv[] )
 	if(!cg_init_extensions( window )){ glfwTerminate(); return 1; }	// version and extensions
 
 	// initializations and validations
-	if (!(program = cg_create_program_from_string("layout(location = 0) in vec3 position;\
-	layout(location = 1) in vec3 normal;\
-	layout(location = 2) in vec2 texcoord;\
-\
-	out vec4 epos;\
-	out vec3 norm;\
-	out vec2 tc;\
-\
-	uniform mat4 model_matrix;\
-	uniform mat4 view_matrix;\
-	uniform mat4 projection_matrix;\
-\
-	void main()\
-	{\
-		vec4 wpos = model_matrix * vec4(position, 1);\
-		epos = view_matrix * wpos;\
-		gl_Position = projection_matrix * epos;\
-\
-		norm = normalize(mat3(view_matrix * model_matrix) * normal);\
-		tc = texcoord;\
-	}","#ifdef GL_ES\
-\n	#ifndef GL_FRAGMENT_PRECISION_HIGH\
-\n		#define highp mediump\
-\n	#endif\
-\n	precision highp float;\
-\n#endif\
-\
-\n	in vec4 epos;\
-	in vec3 norm;\
-	in vec2 tc;\
-\
-	out vec4 fragColor;\
-\
-	uniform mat4	view_matrix;\
-	uniform float	shininess;\
-	uniform vec4	light_position, Ia, Id, Is;\
-	uniform vec4	Ka, Kd, Ks;\
-	uniform bool	b_sun;\
-	uniform bool	b_ring;\
-\
-	uniform sampler2D TEX;\
-	uniform sampler2D alpha;\
-\
-	vec4 phong(vec3 l, vec3 n, vec3 h, vec4 Kd)\
-	{\
-		vec4 Ira = Ka * Ia;\
-		vec4 Ird = max(Kd * dot(l, n) * Id, 0.0);\
-		vec4 Irs = max(Ks * pow(dot(h, n), shininess) * Is, 0.0);\
-		return Ira + Ird + Irs;\
-	}\
-\
-	void main()\
-	{\
-		vec4 lpos = view_matrix * light_position;\
-\
-		vec3 n = normalize(norm);\
-		vec3 p = epos.xyz;\
-		vec3 l = normalize(lpos.xyz - (lpos.a == 0.0 ? vec3(0) : p));\
-		vec3 v = normalize(-p);\
-		vec3 h = normalize(l + v);\
-\
-		vec4 iKd = texture(TEX, tc);\
-		if (b_sun)\
-		{\
-			fragColor = iKd;\
-		}\
-		else fragColor = phong(l, n, h, iKd);\
-		if (b_ring)\
-		{\
-			fragColor.a = texture(alpha, tc).r;\
-		}\
-	}"))) { glfwTerminate(); return 1; }	// create and compile shaders/program
+	if (!(program = cg_create_program(vert_shader_path,frag_shader_path))) { glfwTerminate(); return 1; }	// create and compile shaders/program
 	if(!user_init()){ printf( "Failed to user_init()\n" ); glfwTerminate(); return 1; }					// user initialization
 
 	// register event callbacks

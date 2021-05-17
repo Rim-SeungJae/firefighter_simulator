@@ -44,13 +44,5 @@ void main()
 	vec3 h = normalize(l+v);	// the halfway vector
 
 	vec4 iKd=texture(TEX,tc);
-	if(b_sun)	
-	{
-		fragColor = iKd;
-	}
-	else fragColor = phong( l, n, h, iKd );
-	if(b_ring)
-	{
-		fragColor.a=texture(alpha,tc).r;
-	}
+	fragColor = phong( l, n, h, iKd );
 }

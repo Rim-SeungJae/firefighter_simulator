@@ -7,11 +7,17 @@ struct character_t
 	vec3	center = vec3(0);		// 2D position for translation
 	float	size = 1.0f;		// radius
 	vec4	color;				// RGBA color in [0,1]
+	float	velocity = 5.0f;
+	bool	look_right = true;
+	bool	move_up=false;
+	bool	move_left=false;
+	bool	move_right=false;
+	bool	move_down=false;
 
 	mat4	model_matrix;		// modeling transformation
 
 	// public functions
-	void	update();
+	void	update(float dt);
 };
 
 inline std::vector<character_t> create_characters()
@@ -24,14 +30,38 @@ inline std::vector<character_t> create_characters()
 	return characters;
 }
 
-inline void character_t::update()
+inline void character_t::update(float dt)
 {
+	if (move_up)
+	{
+		center.y += velocity * dt;
+	}
+	if (move_left)
+	{
+		center.x -= velocity * dt;
+	}
+	if (move_right)
+	{
+		center.x += velocity * dt;
+	}
+	if (move_down)
+	{
+		center.y -= velocity * dt;
+	}
 	// these transformations will be explained in later transformation lecture
 	mat4 scale_matrix =
 	{
 		size, 0, 0, 0,
 		0, size, 0, 0,
 		0, 0, size, 0,
+		0, 0, 0, 1
+	};
+
+	mat4 rotation_matrix =
+	{
+		-1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, -1, 0,
 		0, 0, 0, 1
 	};
 
@@ -44,6 +74,10 @@ inline void character_t::update()
 	};
 
 	model_matrix = translate_matrix * scale_matrix;
+	if (look_right == false)
+	{
+		model_matrix = translate_matrix * rotation_matrix * scale_matrix;
+	}
 }
 
 

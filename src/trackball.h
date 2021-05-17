@@ -7,7 +7,7 @@
 // common structures
 struct camera
 {
-	vec3	eye = vec3(0, 0, 10);
+	vec3	eye = vec3(0, -3, 10);
 	vec3	at = vec3(0, 0, 0);
 	vec3	up = vec3(0, 1, 0);
 	mat4	view_matrix = mat4::look_at(eye, at, up);
@@ -41,6 +41,7 @@ struct trackball
 	void update( vec2 m ) const;
 	void update_zoom( vec2 m) const;
 	void update_pan(vec2 m) const;
+	void update_follow(float v, float dt, bool up, bool down, bool left, bool right) const;
 };
 
 inline void trackball::begin( camera * cam, vec2 m)
@@ -103,6 +104,38 @@ inline void trackball::update_pan(vec2 m) const
 	cam->at = at0 - u * p1.x - v * p1.y;
 	cam->view_matrix = mat4::look_at(cam->eye, cam->at, cam->up);
 }
+
+
+inline void trackball::update_follow(float velocity, float dt, bool up, bool down, bool left, bool right) const
+{
+	vec3 n = (eye0 - at0).normalize();
+	vec3 u = up0.cross(n).normalize();
+	vec3 v = n.cross(u).normalize();
+
+	vec2 p1=vec2(0.0f,0.0f);
+	if (up)
+	{
+		p1.y += velocity * dt;
+	}
+	if (down)
+	{
+		p1.y -= velocity * dt;
+	}
+	if (left)
+	{
+		p1.x -= velocity * dt;
+	}
+	if (right)
+	{
+		p1.x += velocity * dt;
+	}
+	if (!b_tracking || length(p1) < 0.0001f) return;		// ignore subtle movement
+
+	cam->eye = eye0 - u * p1.x - v * p1.y;
+	cam->at = at0 - u * p1.x - v * p1.y;
+	cam->view_matrix = mat4::look_at(cam->eye, cam->at, cam->up);
+}
+
 
 // utility function
 inline vec2 cursor_to_ndc( dvec2 cursor, ivec2 window_size )
