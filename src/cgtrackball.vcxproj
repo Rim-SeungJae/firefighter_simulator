@@ -63,6 +63,7 @@
     <ClInclude Include="circle.h" />
     <ClInclude Include="floor.h" />
     <ClInclude Include="trackball.h" />
+    <ClInclude Include="wall.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\bin\shaders\trackball.frag" />

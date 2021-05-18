@@ -3,6 +3,7 @@
 #include "circle.h"
 #include "floor.h"
 #include "character.h"
+#include "wall.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "cgut.h"		// slee's OpenGL utility
 
@@ -13,10 +14,11 @@ static const char*	vert_shader_path = "../bin/shaders/trackball.vert";
 static const char*	frag_shader_path = "../bin/shaders/trackball.frag";
 static const char*  character_image_path = "../bin/images/character.jpg";
 static const char*	floor_image_path = "../bin/images/floor.jpg";
+static const char* wall_image_path = "../bin/images/wall.jpg";
 
 struct light_t
 {
-	vec4	position = vec4(0.0f, 0.0f, 1.0f, 0.0f);
+	vec4	position = vec4(0.0f, 0.0f, 10.0f, 1.0f);
 	vec4	ambient = vec4(0.2f, 0.2f, 0.2f, 1.0f);
 	vec4	diffuse = vec4(0.8f, 0.8f, 0.8f, 1.0f);
 	vec4	specular = vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -41,8 +43,10 @@ GLuint	program	= 0;	// ID holder for GPU program
 GLuint	vertex_array = 0;	// ID holder for vertex array object
 GLuint	ring_vertex_array = 0;
 GLuint	vertex_array_square = 0;
+GLuint	vertex_array_cube = 0;
 GLuint	CHARACTER = 0;
 GLuint	FLOOR = 0;
+GLuint	WALL = 0;
 
 //*************************************
 // global variables
@@ -61,6 +65,7 @@ bool	b_wireframe = false;
 auto	circles = std::move(create_circles());
 auto	floors = std::move(create_floors());
 auto	characters = std::move(create_characters());
+auto	walls = std::move(create_walls());
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
 //*************************************
@@ -76,6 +81,7 @@ material_t	material;
 std::vector<vertex>	unit_circle_vertices;	// host-side vertices
 std::vector<vertex> unit_ring_vertices;
 std::vector<vertex>	unit_square_vertices;	// host-side vertices
+std::vector<vertex>	unit_cube_vertices;	// host-side vertices
 
 //*************************************
 void update()
@@ -241,31 +247,11 @@ void render()
 
 	for (auto& c : characters)
 	{
-		c.update(dt);
-		vec3 n = (cam.eye - cam.at).normalize();
-		vec3 u = cam.up.cross(n).normalize();
-		vec3 v = n.cross(u).normalize();
+		c.update(dt, walls);
 
-		vec2 p1 = vec2(0.0f, 0.0f);
-		if (characters[0].move_up)
-		{
-			p1.y -= characters[0].velocity * dt;
-		}
-		if (characters[0].move_down)
-		{
-			p1.y += characters[0].velocity * dt;
-		}
-		if (characters[0].move_left)
-		{
-			p1.x += characters[0].velocity * dt;
-		}
-		if (characters[0].move_right)
-		{
-			p1.x -= characters[0].velocity * dt;
-		}
-
-		cam.eye = cam.eye - u * p1.x - v * p1.y;
-		cam.at = cam.at - u * p1.x - v * p1.y;
+		cam.eye = characters[0].center;
+		cam.eye.z = 10;
+		cam.at = characters[0].center;
 		cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
 
 		glActiveTexture(GL_TEXTURE0);
@@ -277,6 +263,23 @@ void render()
 
 		// per-circle draw calls
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+	}
+
+	glBindVertexArray(vertex_array_cube);
+
+	for (auto& w : walls)
+	{
+		w.update();
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, WALL);
+		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+		GLint uloc;
+		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, w.model_matrix);
+
+		// per-circle draw calls
+		glDrawElements(GL_TRIANGLES, 12 * 3, GL_UNSIGNED_INT, nullptr);
 	}
 
 	// swap front and back buffers, and display to screen
@@ -497,6 +500,78 @@ void update_vertex_buffer_square(const std::vector<vertex>& vertices)
 	if (!vertex_array_square) { printf("%s(): failed to create vertex aray\n", __func__); return; }
 }
 
+std::vector<vertex> create_cube_vertices()
+{
+	std::vector<vertex> v = {};
+	v.push_back({ vec3(+1.0f, -1.0f, -1.0f), vec3(0.0f, 0.0f, -1.0f), vec2(0.0f, 0.0f) });
+	v.push_back({ vec3(-1.0f, -1.0f, -1.0f), vec3(0.0f, 0.0f, -1.0f), vec2(1.0f, 0.0f) });
+	v.push_back({ vec3(-1.0f, +1.0f, -1.0f), vec3(0.0f, 0.0f, -1.0f), vec2(1.0f, 1.0f) });
+	v.push_back({ vec3(+1.0f, +1.0f, -1.0f), vec3(0.0f, 0.0f, -1.0f), vec2(0.0f, 1.0f) });
+	v.push_back({ vec3(-1.0f, -1.0f, -1.0f), vec3(0.0f, -1.0f, 0.0f), vec2(0.0f, 0.0f) });
+	v.push_back({ vec3(+1.0f, -1.0f, -1.0f), vec3(0.0f, -1.0f, 0.0f), vec2(1.0f, 0.0f) });
+	v.push_back({ vec3(+1.0f, -1.0f, 1.0f), vec3(0.0f, -1.0f, 0.0f), vec2(1.0f, 1.0f) });
+	v.push_back({ vec3(-1.0f, -1.0f, 1.0f), vec3(0.0f, -1.0f, 0.0f), vec2(0.0f, 1.0f) });
+	v.push_back({ vec3(+1.0f, -1.0f, -1.0f), vec3(1.0f, 0.0f, 0.0f), vec2(0.0f, 0.0f) });
+	v.push_back({ vec3(+1.0f, +1.0f, -1.0f), vec3(1.0f, 0.0f, 0.0f), vec2(1.0f, 0.0f) });
+	v.push_back({ vec3(+1.0f, +1.0f, 1.0f), vec3(1.0f, 0.0f, 0.0f), vec2(1.0f, 1.0f) });
+	v.push_back({ vec3(+1.0f, -1.0f, 1.0f), vec3(1.0f, 0.0f, 0.0f), vec2(0.0f, 1.0f) });
+	v.push_back({ vec3(+1.0f, +1.0f, -1.0f), vec3(0.0f, 1.0f, 0.0f), vec2(0.0f, 0.0f) });
+	v.push_back({ vec3(-1.0f, +1.0f, -1.0f), vec3(0.0f, 1.0f, 0.0f), vec2(1.0f, 0.0f) });
+	v.push_back({ vec3(-1.0f, +1.0f, 1.0f), vec3(0.0f, 1.0f, 0.0f), vec2(1.0f, 1.0f) });
+	v.push_back({ vec3(+1.0f, +1.0f, 1.0f), vec3(0.0f, 1.0f, 0.0f), vec2(0.0f, 1.0f) });
+	v.push_back({ vec3(-1.0f, +1.0f, -1.0f), vec3(-1.0f, 0.0f, 0.0f), vec2(0.0f, 0.0f) });
+	v.push_back({ vec3(-1.0f, -1.0f, -1.0f), vec3(-1.0f, 0.0f, 0.0f), vec2(1.0f, 0.0f) });
+	v.push_back({ vec3(-1.0f, -1.0f, 1.0f), vec3(-1.0f, 0.0f, 0.0f), vec2(1.0f, 1.0f) });
+	v.push_back({ vec3(-1.0f, +1.0f, 1.0f), vec3(-1.0f, 0.0f, 0.0f), vec2(0.0f, 1.0f) });
+	v.push_back({ vec3(-1.0f, -1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 0.0f) });
+	v.push_back({ vec3(+1.0f, -1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 0.0f) });
+	v.push_back({ vec3(+1.0f, +1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 1.0f) });
+	v.push_back({ vec3(-1.0f, +1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 1.0f) });
+	return v;
+}
+
+void update_vertex_buffer_cube(const std::vector<vertex>& vertices)
+{
+	static GLuint vertex_buffer = 0;	// ID holder for vertex buffer
+	static GLuint index_buffer = 0;		// ID holder for index buffer
+
+	// clear and create new buffers
+	if (vertex_buffer)	glDeleteBuffers(1, &vertex_buffer);	vertex_buffer = 0;
+	if (index_buffer)	glDeleteBuffers(1, &index_buffer);	index_buffer = 0;
+
+	// check exceptions
+	if (vertices.empty()) { printf("[error] vertices is empty.\n"); return; }
+
+	// create buffers
+
+	std::vector<uint> indices;
+	for (uint k = 0; k < 6 * 4; k += 4)
+	{
+		indices.push_back(k);	// the origin
+		indices.push_back(k + 1);
+		indices.push_back(k + 2);
+
+		indices.push_back(k);
+		indices.push_back(k + 2);
+		indices.push_back(k + 3);
+	}
+
+	// generation of vertex buffer: use vertices as it is
+	glGenBuffers(1, &vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+
+	// geneation of index buffer
+	glGenBuffers(1, &index_buffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint) * indices.size(), &indices[0], GL_STATIC_DRAW);
+
+	// generate vertex array object, which is mandatory for OpenGL 3.3 and higher
+	if (vertex_array_cube) glDeleteVertexArrays(1, &vertex_array_cube);
+	vertex_array_cube = cg_create_vertex_array(vertex_buffer, index_buffer);
+	if (!vertex_array_square) { printf("%s(): failed to create vertex aray\n", __func__); return; }
+}
+
 void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 {
 	if(action==GLFW_PRESS)
@@ -596,18 +671,20 @@ bool user_init()
 	glEnable( GL_CULL_FACE );								// turn on backface culling
 	glEnable( GL_DEPTH_TEST );								// turn on depth tests
 	glEnable(GL_TEXTURE_2D);								// enable texturing
-	glActiveTexture(GL_TEXTURE0);							// notify GL the current texture slot is 0
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glActiveTexture(GL_TEXTURE0);							// notify GL the current texture slot is 0
+	//glEnable(GL_BLEND);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
 	// define the position of four corner vertices
 	unit_circle_vertices = std::move(create_circle_vertices());
 	unit_square_vertices = std::move(create_square_vertices());
+	unit_cube_vertices = std::move(create_cube_vertices());
 
 	// create vertex buffer; called again when index buffering mode is toggled
 	update_vertex_buffer(unit_circle_vertices);
 	update_vertex_buffer_square(unit_square_vertices);
+	update_vertex_buffer_cube(unit_cube_vertices);
 
 	unit_ring_vertices = std::move(create_ring_vertices());
 
@@ -616,6 +693,7 @@ bool user_init()
 	// load texture
 	FLOOR = cg_create_texture(floor_image_path, true); if (!FLOOR) return false;
 	CHARACTER = cg_create_texture(character_image_path, true); if (!CHARACTER) return false;
+	WALL = cg_create_texture(wall_image_path, true); if (!WALL) return false;
 
 	return true;
 }

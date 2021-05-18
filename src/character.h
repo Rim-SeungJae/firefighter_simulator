@@ -1,4 +1,5 @@
 #pragma once
+#include "wall.h"
 #ifndef __CHARACTER_H__
 #define __CHARACTER_H__
 
@@ -17,7 +18,7 @@ struct character_t
 	mat4	model_matrix;		// modeling transformation
 
 	// public functions
-	void	update(float dt);
+	void	update(float dt, std::vector<wall_t> walls);
 };
 
 inline std::vector<character_t> create_characters()
@@ -30,8 +31,9 @@ inline std::vector<character_t> create_characters()
 	return characters;
 }
 
-inline void character_t::update(float dt)
+inline void character_t::update(float dt, std::vector<wall_t> walls)
 {
+	vec3 center0 = center;
 	if (move_up)
 	{
 		center.y += velocity * dt;
@@ -47,6 +49,13 @@ inline void character_t::update(float dt)
 	if (move_down)
 	{
 		center.y -= velocity * dt;
+	}
+	for (auto& w : walls)
+	{
+		if (w.center.x - w.width<center.x + size && w.center.x + w.width > center.x - size && w.center.y + w.length > center.y - size && w.center.y - w.length < center.y + size)
+		{
+			center = center0;
+		}
 	}
 	// these transformations will be explained in later transformation lecture
 	mat4 scale_matrix =
