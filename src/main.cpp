@@ -4,6 +4,7 @@
 #include "floor.h"
 #include "character.h"
 #include "wall.h"
+#include "fire.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "cgut.h"		// slee's OpenGL utility
 #include "particle.h"
@@ -49,6 +50,7 @@ GLuint	CHARACTER = 0;
 GLuint	FLOOR = 0;
 GLuint	WALL = 0;
 GLuint  FLAME = 0;
+GLuint	FIRE = 0;
 
 //*************************************
 // global variables
@@ -68,6 +70,7 @@ auto	circles = std::move(create_circles());
 auto	floors = std::move(create_floors());
 auto	characters = std::move(create_characters());
 auto	walls = std::move(create_walls());
+auto	fires = std::move(create_fires());
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
 bool b_particle = false;
@@ -171,6 +174,25 @@ void render()
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
 	}
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	for (auto& f : fires)
+	{
+		f.update();
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, FIRE);
+		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+		GLint uloc;
+		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, f.model_matrix);
+		glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
+
+		// per-circle draw calls
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+	}
+	glDisable(GL_BLEND);
+
 	glBindVertexArray(vertex_array_cube);
 	
 	for (auto& w : walls)
@@ -194,7 +216,7 @@ void render()
 	for (auto& p : particles)
 	{
 		p.update(program,dt);
-		mat4 translate_matrix = mat4::translate(vec3(p.pos.x, p.pos.y, 1));
+		mat4 translate_matrix = mat4::translate(vec3(p.pos.x, p.pos.y, 0.06f));
 		mat4 scale_matrix = mat4::scale(p.scale);
 		mat4 model_matrix = translate_matrix * scale_matrix;
 
@@ -480,6 +502,7 @@ bool user_init()
 	FLOOR = cg_create_texture(floor_image_path, true); if (!FLOOR) return false;
 	CHARACTER = cg_create_texture(character_image_path, true); if (!CHARACTER) return false;
 	WALL = cg_create_texture(wall_image_path, true); if (!WALL) return false;
+	FIRE = cg_create_texture("../bin/images/fire.png", true); if (!FIRE) return false;
 
 	static vertex vertices[] = { {vec3(-1,-1,0),vec3(0,0,1),vec2(0,0)}, {vec3(1,-1,0),vec3(0,0,1),vec2(1,0)}, {vec3(-1,1,0),vec3(0,0,1),vec2(0,1)}, {vec3(1,1,0),vec3(0,0,1),vec2(1,1)} }; // strip ordering [0, 1, 3, 2]
 

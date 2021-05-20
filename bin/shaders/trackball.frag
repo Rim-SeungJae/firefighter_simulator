@@ -24,6 +24,7 @@ uniform bool	b_ring;
 uniform bool	b_particle;
 uniform vec4	color;
 uniform float	alpha_val;
+uniform bool	b_fire;
 
 uniform sampler2D TEX;
 uniform sampler2D alpha;
@@ -49,6 +50,7 @@ void main()
 
 	vec4 iKd=texture(TEX,tc);
 	fragColor = phong( l, n, h, iKd );
+	if(b_fire) fragColor.a = iKd.a;
 
 	if(b_particle)
 	{

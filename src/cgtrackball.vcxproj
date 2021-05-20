@@ -65,6 +65,7 @@
     <ClInclude Include="trackball.h" />
     <ClInclude Include="wall.h" />
     <ClInclude Include="particle.h" />
+    <ClInclude Include="fire.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\bin\shaders\trackball.frag" />

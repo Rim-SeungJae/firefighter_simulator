@@ -30,10 +30,10 @@ struct particle_t
 
 inline void particle_t::reset()
 {
-	pos = vec2(random_range(-1.0f, 1.0f), random_range(-1.0f, 1.0f));
-	scale = random_range(0.005f, 0.08f);
+	pos = vec2(random_range(-0.4f, 0.4f), random_range(-0.2f, 0.0f));
+	scale = random_range(0.02f, 0.04f);
 	life = random_range(0.01f, 1.0f);
-	velocity = vec2(random_range(-1.0f, 1.0f), random_range(-1.0f, 1.0f));
+	velocity = vec2(0.0f, random_range(1.0f, 2.0f));
 	elapsed_time = 0.0f;
 	time_interval = random_range(1.0f, 3.0f);
 	alpha_val=1.0f;
@@ -44,6 +44,7 @@ inline void particle_t::update(GLuint prg, float dt)
 	program = prg;
 	const float dwTime = dt;
 	elapsed_time += dwTime;
+	/*
 	if (elapsed_time > time_interval)
 	{
 		const float theta = random_range(0, 1.0f) * PI * 2.0f;
@@ -51,7 +52,7 @@ inline void particle_t::update(GLuint prg, float dt)
 
 		elapsed_time = 0.0f;
 	}
-
+	*/
 	pos += velocity*dwTime;
 
 	life -= dwTime;
@@ -65,7 +66,6 @@ inline void particle_t::update(GLuint prg, float dt)
 	// dead
 	if (alpha_val < 0.0f)
 	{
-		printf("reset");
 		reset();
 	}
 }
