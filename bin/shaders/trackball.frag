@@ -20,6 +20,10 @@ uniform vec4	light_position, Ia, Id, Is;	// light
 uniform vec4	Ka, Kd, Ks;					// material properties
 uniform bool	b_sun;
 uniform bool	b_ring;
+// particle
+uniform bool	b_particle;
+uniform vec4	color;
+uniform float	alpha_val;
 
 uniform sampler2D TEX;
 uniform sampler2D alpha;
@@ -45,4 +49,10 @@ void main()
 
 	vec4 iKd=texture(TEX,tc);
 	fragColor = phong( l, n, h, iKd );
+
+	if(b_particle)
+	{
+		fragColor = texture( TEX, tc ); if(fragColor.a < 0.001) discard;
+		fragColor.a = alpha_val;
+	}
 }

@@ -6,6 +6,7 @@
 #include "wall.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "cgut.h"		// slee's OpenGL utility
+#include "particle.h"
 
 //*************************************
 // global constants
@@ -14,7 +15,7 @@ static const char*	vert_shader_path = "../bin/shaders/trackball.vert";
 static const char*	frag_shader_path = "../bin/shaders/trackball.frag";
 static const char*  character_image_path = "../bin/images/character.jpg";
 static const char*	floor_image_path = "../bin/images/floor.jpg";
-static const char* wall_image_path = "../bin/images/wall.jpg";
+static const char*	wall_image_path = "../bin/images/wall.jpg";
 
 struct light_t
 {
@@ -47,6 +48,7 @@ GLuint	vertex_array_cube = 0;
 GLuint	CHARACTER = 0;
 GLuint	FLOOR = 0;
 GLuint	WALL = 0;
+GLuint  FLAME = 0;
 
 //*************************************
 // global variables
@@ -68,6 +70,8 @@ auto	characters = std::move(create_characters());
 auto	walls = std::move(create_walls());
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
+bool b_particle = false;
+
 //*************************************
 // scene objects
 mesh*		pMesh = nullptr;
@@ -82,6 +86,7 @@ std::vector<vertex>	unit_circle_vertices;	// host-side vertices
 std::vector<vertex> unit_ring_vertices;
 std::vector<vertex>	unit_square_vertices;	// host-side vertices
 std::vector<vertex>	unit_cube_vertices;	// host-side vertices
+std::vector<particle_t> particles;
 
 //*************************************
 void update()
@@ -127,106 +132,7 @@ void render()
 	glUseProgram( program );
 	
 	// bind vertex array object
-	glBindVertexArray(vertex_array);
 
-	/*
-	// render sphere
-	for (auto& c : circles)
-	{
-		// per-circle update
-		c.update(dt);
-
-		if (c.b_sun)
-		{
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, SUN);
-			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-		}
-		else if (c.b_dwarf)
-		{
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, MOON);
-			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-		}
-		else if (c.b_ring)
-		{
-			glBindVertexArray(0);
-			glBindVertexArray(ring_vertex_array);
-
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, RING);
-			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, RING_a);
-			glUniform1i(glGetUniformLocation(program, "alpha"), 0);
-
-			GLint uloc;
-			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
-			glUniform1i(glGetUniformLocation(program, "b_sun"), c.b_sun);
-			glUniform1i(glGetUniformLocation(program, "b_ring"), c.b_ring);
-			glDrawElements(GL_TRIANGLES, 72 * 3 * 2 * 2 , GL_UNSIGNED_INT, nullptr);
-
-			glBindVertexArray(0);
-			glBindVertexArray(vertex_array);
-			continue;
-		}
-		else {
-			switch (c.planet)
-			{
-				case 1:
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, p1);
-					glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-					break;
-				case 2:
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, p2);
-					glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-					break;
-				case 3:
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, p3);
-					glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-					break;
-				case 4:
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, p4);
-					glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-					break;
-				case 5:
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, p5);
-					glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-					break;
-				case 6:
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, p6);
-					glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-					break;
-				case 7:
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, p7);
-					glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-					break;
-				case 8:
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, p8);
-					glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-					break;
-			}
-		}
-
-		// update per-circle uniforms
-		GLint uloc;
-		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
-		glUniform1i(glGetUniformLocation(program, "b_sun"), c.b_sun);
-		glUniform1i(glGetUniformLocation(program, "b_ring"), c.b_ring);
-		// per-circle draw calls
-		glDrawElements(GL_TRIANGLES, 35 * 72 * 6, GL_UNSIGNED_INT, nullptr);
-		
-	}
-	*/
 	glBindVertexArray(vertex_array_square);
 	
 	for (auto& f : floors)
@@ -248,12 +154,12 @@ void render()
 	for (auto& c : characters)
 	{
 		c.update(dt, walls);
-
+		/*
 		cam.eye = characters[0].center;
 		cam.eye.z = 10;
 		cam.at = characters[0].center;
 		cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
-
+		*/
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, CHARACTER);
 		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
@@ -266,7 +172,7 @@ void render()
 	}
 
 	glBindVertexArray(vertex_array_cube);
-
+	
 	for (auto& w : walls)
 	{
 		w.update();
@@ -282,6 +188,28 @@ void render()
 		glDrawElements(GL_TRIANGLES, 12 * 3, GL_UNSIGNED_INT, nullptr);
 	}
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	b_particle = true;	glBindVertexArray(vertex_array);
+	for (auto& p : particles)
+	{
+		p.update(program,dt);
+		mat4 translate_matrix = mat4::translate(vec3(p.pos.x, p.pos.y, 1));
+		mat4 scale_matrix = mat4::scale(p.scale);
+		mat4 model_matrix = translate_matrix * scale_matrix;
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, FLAME);
+		glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
+
+		GLint uloc;
+		uloc = glGetUniformLocation(program, "color");			if (uloc > -1) glUniform4fv(uloc, 1, p.color);
+		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, model_matrix);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	}
+	glDisable(GL_BLEND);
+	b_particle = false;
+	glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
 	// swap front and back buffers, and display to screen
 	glfwSwapBuffers( window );
 }
@@ -303,142 +231,6 @@ void print_help()
 	printf("- press 'd' to change color type\n");
 	printf("- press 'w' to toggle wireframe\n");
 	printf( "\n" );
-}
-
-std::vector<vertex> create_circle_vertices()
-{
-	std::vector<vertex> v = {};
-	for (uint i = 0; i <= 36; i++)
-	{
-		float theta = PI * i / 36.0f, c_theta = cos(theta), s_theta = sin(theta);
-		for (uint j = 0; j <= 72; j++)
-		{
-			float phi = PI * 2.0f * j / 72.0f, c_phi = cos(phi), s_phi = sin(phi);
-			v.push_back({ vec3(s_theta * c_phi,s_theta * s_phi,c_theta), vec3(s_theta * c_phi,s_theta * s_phi,c_theta), vec2(phi / 2.0f / PI,1.0f - theta / PI) });
-		}
-		//float t=PI*2.0f*k/float(N), c=cos(t), s=sin(t);
-	}
-	return v;
-}
-
-void update_vertex_buffer(const std::vector<vertex>& vertices)
-{
-	static GLuint vertex_buffer = 0;	// ID holder for vertex buffer
-	static GLuint index_buffer = 0;		// ID holder for index buffer
-
-	// clear and create new buffers
-	if (vertex_buffer)	glDeleteBuffers(1, &vertex_buffer);	vertex_buffer = 0;
-	if (index_buffer)	glDeleteBuffers(1, &index_buffer);	index_buffer = 0;
-
-	// check exceptions
-	if (vertices.empty()) { printf("[error] vertices is empty.\n"); return; }
-
-	// create buffers
-
-	std::vector<uint> indices;
-	/*
-	for( uint k=0; k < N; k++ )
-	{
-		indices.push_back(0);	// the origin
-		indices.push_back(k+1);
-		indices.push_back(k+2);
-	}
-	*/
-	for (uint i = 0; i < 36; i++)
-	{
-		for (uint j = 0; j < 72; j++)
-		{
-			if (i != 0)
-			{
-				indices.push_back(i * (72 + 1) + j);
-				indices.push_back(i * (72 + 1) + (72 + 1) + j);
-				indices.push_back(i * (72 + 1) + 1 + j);
-			}
-			if (i != 35)
-			{
-				indices.push_back(i * (72 + 1) + 1 + j);
-				indices.push_back(i * (72 + 1) + (72 + 1) + j);
-				indices.push_back(i * (72 + 1) + (72 + 1) + 1 + j);
-			}
-		}
-	}
-
-	// generation of vertex buffer: use vertices as it is
-	glGenBuffers(1, &vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-
-	// geneation of index buffer
-	glGenBuffers(1, &index_buffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint) * indices.size(), &indices[0], GL_STATIC_DRAW);
-
-	// generate vertex array object, which is mandatory for OpenGL 3.3 and higher
-	if (vertex_array) glDeleteVertexArrays(1, &vertex_array);
-	vertex_array = cg_create_vertex_array(vertex_buffer, index_buffer);
-	if (!vertex_array) { printf("%s(): failed to create vertex aray\n", __func__); return; }
-}
-
-std::vector<vertex> create_ring_vertices()
-{
-	std::vector<vertex> v = {}; // origin
-	for (uint k = 0; k <= 72; k++)
-	{
-		float t = PI * 2.0f * k / float(72), c = cos(t), s = sin(t);
-		float p = PI * 2.0f * k / float(72) + PI / float(72), cp = 0.6f * cos(p), sp = 0.6f * sin(p);
-		v.push_back({ vec3(cp,sp,0), vec3(cp,sp,0), vec2(1.0f,t / 2 / PI) });
-		v.push_back({ vec3(c,s,0), vec3(c,s,0), vec2(0.0f,(p - PI / float(72)) / 2 / PI) });
-	}
-	return v;
-}
-
-void update_ring_vertex_buffer(const std::vector<vertex>& vertices)
-{
-	static GLuint vertex_buffer = 0;	// ID holder for vertex buffer
-	static GLuint index_buffer = 0;		// ID holder for index buffer
-
-	// clear and create new buffers
-	if (vertex_buffer)	glDeleteBuffers(1, &vertex_buffer);	vertex_buffer = 0;
-	if (index_buffer)	glDeleteBuffers(1, &index_buffer);	index_buffer = 0;
-
-	// check exceptions
-	if (vertices.empty()) { printf("[error] vertices is empty.\n"); return; }
-
-	// create buffer
-	std::vector<uint> indices;
-	for (uint k = 0; k < 2 * 72; k += 2)
-	{
-		indices.push_back(k);	// the origin
-		indices.push_back(k + 1);
-		indices.push_back(k + 3);
-
-		indices.push_back(k + 3);
-		indices.push_back(k + 1);
-		indices.push_back(k);
-
-		indices.push_back(k);	// the origin
-		indices.push_back(k + 3);
-		indices.push_back(k + 2);
-
-		indices.push_back(k + 2);
-		indices.push_back(k + 3);
-		indices.push_back(k);	// the origin
-	}
-
-	// generation of vertex buffer: use vertices as it is
-	glGenBuffers(1, &vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-
-	// geneation of index buffer
-	glGenBuffers(1, &index_buffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint) * indices.size(), &indices[0], GL_STATIC_DRAW);
-
-	// generate vertex array object, which is mandatory for OpenGL 3.3 and higher
-	if (ring_vertex_array) glDeleteVertexArrays(1, &ring_vertex_array);
-	ring_vertex_array = cg_create_vertex_array(vertex_buffer, index_buffer);
-	if (!ring_vertex_array) { printf("%s(): failed to create vertex aray\n", __func__); return; }
 }
 
 std::vector<vertex> create_square_vertices()
@@ -677,23 +469,33 @@ bool user_init()
 
 
 	// define the position of four corner vertices
-	unit_circle_vertices = std::move(create_circle_vertices());
 	unit_square_vertices = std::move(create_square_vertices());
 	unit_cube_vertices = std::move(create_cube_vertices());
 
 	// create vertex buffer; called again when index buffering mode is toggled
-	update_vertex_buffer(unit_circle_vertices);
 	update_vertex_buffer_square(unit_square_vertices);
 	update_vertex_buffer_cube(unit_cube_vertices);
-
-	unit_ring_vertices = std::move(create_ring_vertices());
-
-	update_ring_vertex_buffer(unit_ring_vertices);
 
 	// load texture
 	FLOOR = cg_create_texture(floor_image_path, true); if (!FLOOR) return false;
 	CHARACTER = cg_create_texture(character_image_path, true); if (!CHARACTER) return false;
 	WALL = cg_create_texture(wall_image_path, true); if (!WALL) return false;
+
+	static vertex vertices[] = { {vec3(-1,-1,0),vec3(0,0,1),vec2(0,0)}, {vec3(1,-1,0),vec3(0,0,1),vec2(1,0)}, {vec3(-1,1,0),vec3(0,0,1),vec2(0,1)}, {vec3(1,1,0),vec3(0,0,1),vec2(1,1)} }; // strip ordering [0, 1, 3, 2]
+
+	// generation of vertex buffer: use vertices as it is
+	GLuint vertex_buffer;
+	glGenBuffers(1, &vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * 4, &vertices[0], GL_STATIC_DRAW);
+
+	// generate vertex array object, which is mandatory for OpenGL 3.3 and higher
+	if (vertex_array) glDeleteVertexArrays(1, &vertex_array);
+	vertex_array = cg_create_vertex_array(vertex_buffer);
+	if (!vertex_array) { printf("%s(): failed to create vertex aray\n", __func__); return false; }
+
+	FLAME = cg_create_texture("../bin/images/flame_particle.png", false); if (!FLAME) return false;
+	particles.resize(particle_t::MAX_PARTICLES);
 
 	return true;
 }
