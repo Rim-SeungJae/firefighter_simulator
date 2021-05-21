@@ -2,10 +2,21 @@
 #ifndef __FIRE_H__
 #define __FIRE_H__
 
+#include "wall.h"
+#include "cgut.h"
+#include "cgmath.h"
+
+inline vec3 random_pos() 
+{ 
+	float x = rand() % 40 - 19.5f;
+	float y = rand() % 40 - 19.5f;
+	return vec3(x,y,0.5f); 
+}
+
 struct fire_t
 {
 	vec3	center = vec3(0);		// 2D position for translation
-	float	size = 1.0f;		// radius
+	float	size = 0.5f;		// radius
 
 	mat4	model_matrix;		// modeling transformation
 
@@ -13,13 +24,26 @@ struct fire_t
 	void	update();
 };
 
-inline std::vector<fire_t> create_fires()
+inline std::vector<fire_t> create_fires(int N, std::vector<wall_t> walls)
 {
 	std::vector<fire_t> fires;
 	fire_t t;
 
-	t = { vec3(0,0,0.05f),0.5f };
-	fires.emplace_back(t);
+	for (int i = 0; i < N; i++)
+	{
+		vec3 pos = random_pos();
+		float size = 0.5f;
+		for (auto& w : walls)
+		{
+			if (w.center.x - w.width<pos.x + size && w.center.x + w.width > pos.x - size && w.center.y + w.length > pos.y - size && w.center.y - w.length < pos.y + size)
+			{
+				i--;
+				continue;
+			}
+		}
+		t = { pos };
+		fires.emplace_back(t);
+	}
 	return fires;
 }
 

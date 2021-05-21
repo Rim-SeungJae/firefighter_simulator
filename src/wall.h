@@ -5,8 +5,9 @@
 struct wall_t
 {
 	vec3	center = vec3(0);		// 2D position for translation
-	float	width = 1.0f;
-	float	length = 1.0f;		// radius
+	float	width = 0.5f;
+	float	length = 0.5f;		// radius
+	float	height = 0.5f;
 	vec4	color;				// RGBA color in [0,1]
 
 	mat4	model_matrix;		// modeling transformation
@@ -20,8 +21,39 @@ inline std::vector<wall_t> create_walls()
 	std::vector<wall_t> walls;
 	wall_t w;
 
-	w = { vec3(0.0f,2.0f,1.0f),1.0f, 1.0f };
-	walls.emplace_back(w);
+	for (float i = -19.5f; i <= 19.5f; i++)
+	{
+		w = { vec3(19.5f,i,1.0f)};
+		walls.emplace_back(w);
+		w = { vec3(-19.5f,i,1.0f) };
+		walls.emplace_back(w);
+		w = { vec3(i,19.5f,1.0f) };
+		walls.emplace_back(w);
+		w = { vec3(i,-19.5f,1.0f) };
+		walls.emplace_back(w);
+	}
+	for (float i = -18.5f; i <= 10.0f; i++)
+	{
+		if (i<-1.0f && i>-4.0f) continue;
+		w = { vec3(0.5f,i,1.0f) };
+		walls.emplace_back(w);
+	}
+	for (float i = -18.5f; i <= 0.0f; i++)
+	{
+		w = { vec3(i,-0.5f,1.0f) };
+		walls.emplace_back(w);
+	}
+	for (float i = -18.5f; i <= -4.0f; i++)
+	{
+		w = { vec3(9.5f,i,1.0f) };
+		walls.emplace_back(w);
+	}
+	for (float i = 0.5f; i < 19.0f; i++)
+	{
+		if (i > 6.0f && i < 13.0f) continue;
+		w = { vec3(i,-4.5f,1.0f) };
+		walls.emplace_back(w);
+	}
 	return walls;
 }
 
@@ -32,7 +64,7 @@ inline void wall_t::update()
 	{
 		width, 0, 0, 0,
 		0, length, 0, 0,
-		0, 0, 1, 0,
+		0, 0, height, 0,
 		0, 0, 0, 1
 	};
 

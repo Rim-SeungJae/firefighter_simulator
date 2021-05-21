@@ -4,10 +4,10 @@
 #include "floor.h"
 #include "character.h"
 #include "wall.h"
-#include "fire.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "cgut.h"		// slee's OpenGL utility
 #include "particle.h"
+#include "fire.h"
 #include "irrKlang\irrKlang.h"
 #pragma comment(lib, "irrKlang.lib")
 
@@ -57,6 +57,7 @@ GLuint	FIRE = 0;
 //*************************************
 // global variables
 int		frame = 0;				// index of rendering frames
+int		n_fire = 30;
 float	t = 0.0f;						// current simulation parameter
 float	dt = 0.0f;
 float	dx = 0.0f;
@@ -72,7 +73,7 @@ auto	circles = std::move(create_circles());
 auto	floors = std::move(create_floors());
 auto	characters = std::move(create_characters());
 auto	walls = std::move(create_walls());
-auto	fires = std::move(create_fires());
+auto	fires = std::move(create_fires(n_fire,walls));
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
 bool b_particle = false;

@@ -1,12 +1,13 @@
 #pragma once
-#include "wall.h"
 #ifndef __CHARACTER_H__
 #define __CHARACTER_H__
+
+#include "wall.h"
 
 struct character_t
 {
 	vec3	center = vec3(0);		// 2D position for translation
-	float	size = 1.0f;		// radius
+	float	size = 0.5f;		// radius
 	vec4	color;				// RGBA color in [0,1]
 	float	velocity = 5.0f;
 	bool	look_right = true;
@@ -26,7 +27,7 @@ inline std::vector<character_t> create_characters()
 	std::vector<character_t> characters;
 	character_t t;
 
-	t = { vec3(0,0,0.1f),0.5f };
+	t = { vec3(2.0f,2.0f,0.1f),0.5f };
 	characters.emplace_back(t);
 	return characters;
 }
