@@ -8,6 +8,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "cgut.h"		// slee's OpenGL utility
 #include "particle.h"
+#include "irrKlang\irrKlang.h"
+#pragma comment(lib, "irrKlang.lib")
 
 //*************************************
 // global constants
@@ -74,6 +76,12 @@ auto	fires = std::move(create_fires());
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
 bool b_particle = false;
+static const char* mp3_path = "../bin/sounds/dog.mp3";
+
+//*******************************************************************
+// irrKlang objects
+irrklang::ISoundEngine* engine;
+irrklang::ISoundSource* mp3_src = nullptr;
 
 //*************************************
 // scene objects
@@ -519,6 +527,16 @@ bool user_init()
 
 	FLAME = cg_create_texture("../bin/images/flame_particle.png", false); if (!FLAME) return false;
 	particles.resize(particle_t::MAX_PARTICLES);
+
+	engine = irrklang::createIrrKlangDevice();
+	if (!engine) return false;
+	//add sound source from the sound file
+	mp3_src = engine->addSoundSourceFromFile(mp3_path);
+	//set default volume
+	mp3_src->setDefaultVolume(0.5f);
+	//play the sound file
+	engine->play2D(mp3_src, true);
+	printf("> playing %s\n", "mp3");
 
 	return true;
 }
