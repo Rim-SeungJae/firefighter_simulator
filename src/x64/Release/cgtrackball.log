@@ -1,0 +1,14 @@
+﻿  main.cpp
+C:\Users\dipreez\Desktop\그래픽스개론\cg-t1\2021_cg_t1\src\cgut.h(424,93): error C2220: 다음 경고는 오류로 처리됩니다.
+C:\Users\dipreez\Desktop\그래픽스개론\cg-t1\2021_cg_t1\src\cgut.h(424,93): warning C4267: '인수': 'size_t'에서 '_Ty'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+          with
+          [
+              _Ty=GLint
+          ]
+C:\Users\dipreez\Desktop\그래픽스개론\cg-t1\2021_cg_t1\src\cgut.h(425,82): warning C4267: '인수': 'size_t'에서 '_Ty'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+          with
+          [
+              _Ty=GLint
+          ]
+C:\Users\dipreez\Desktop\그래픽스개론\cg-t1\2021_cg_t1\src\cgut.h(428,75): warning C4267: '인수': 'size_t'에서 'GLsizei'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\dipreez\Desktop\그래픽스개론\cg-t1\2021_cg_t1\src\cgut.h(493,127): warning C4267: '인수': 'size_t'에서 'GLint'(으)로 변환하면서 데이터가 손실될 수 있습니다.

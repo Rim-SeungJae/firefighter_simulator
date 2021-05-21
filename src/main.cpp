@@ -76,11 +76,11 @@ auto	fires = std::move(create_fires());
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
 bool b_particle = false;
-static const char* mp3_path = "../bin/sounds/dog.mp3";
+static const char* mp3_path = "../bin/sounds/theme.mp3";
 
 //*******************************************************************
 // irrKlang objects
-irrklang::ISoundEngine* engine;
+irrklang::ISoundEngine* engine = nullptr;
 irrklang::ISoundSource* mp3_src = nullptr;
 
 //*************************************
@@ -543,6 +543,7 @@ bool user_init()
 
 void user_finalize()
 {
+	engine->drop();
 }
 
 int main( int argc, char* argv[] )
