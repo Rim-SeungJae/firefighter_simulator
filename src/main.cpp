@@ -11,8 +11,17 @@
 #include "irrKlang\irrKlang.h"
 #pragma comment(lib, "irrKlang.lib")
 
+struct Srand
+{
+	Srand()
+	{
+		srand((unsigned int)time(nullptr));
+	}
+};
+
 //*************************************
 // global constants
+static const Srand sr;
 static const char*	window_name = "cgbase - trackball";
 static const char*	vert_shader_path = "../bin/shaders/trackball.vert";
 static const char*	frag_shader_path = "../bin/shaders/trackball.frag";
@@ -166,12 +175,12 @@ void render()
 	for (auto& c : characters)
 	{
 		c.update(dt, walls);
-		/*
+		
 		cam.eye = characters[0].center;
 		cam.eye.z = 10;
 		cam.at = characters[0].center;
 		cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
-		*/
+		
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, CHARACTER);
 		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
@@ -183,10 +192,9 @@ void render()
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
 	}
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	for (auto& f : fires)
 	{
+		glBindVertexArray(vertex_array_square);
 		f.update();
 
 		glActiveTexture(GL_TEXTURE0);
@@ -195,12 +203,39 @@ void render()
 
 		GLint uloc;
 		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, f.model_matrix);
-		glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
 
 		// per-circle draw calls
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+		
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		
+		b_particle = true;	glBindVertexArray(vertex_array);
+		
+		for (auto& p : f.particles)
+		{
+			p.update(program, dt);
+
+			mat4 translate_matrix = mat4::translate(vec3(p.pos.x, p.pos.y, 0.06f));
+			mat4 scale_matrix = mat4::scale(p.scale);
+			mat4 translate_matrix_2 = mat4::translate(vec3(f.center.x, f.center.y, 0));
+			mat4 model_matrix = translate_matrix_2 * translate_matrix * scale_matrix;
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, FLAME);
+			glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
+
+			GLint uloc;
+			uloc = glGetUniformLocation(program, "color");			if (uloc > -1) glUniform4fv(uloc, 1, p.color);
+			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, model_matrix);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			
+		}
+		
+		glDisable(GL_BLEND);
+		b_particle = false;
+		glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
 	}
-	glDisable(GL_BLEND);
 
 	glBindVertexArray(vertex_array_cube);
 	
@@ -218,29 +253,6 @@ void render()
 		// per-circle draw calls
 		glDrawElements(GL_TRIANGLES, 12 * 3, GL_UNSIGNED_INT, nullptr);
 	}
-
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	b_particle = true;	glBindVertexArray(vertex_array);
-	for (auto& p : particles)
-	{
-		p.update(program,dt);
-		mat4 translate_matrix = mat4::translate(vec3(p.pos.x, p.pos.y, 0.06f));
-		mat4 scale_matrix = mat4::scale(p.scale);
-		mat4 model_matrix = translate_matrix * scale_matrix;
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, FLAME);
-		glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
-
-		GLint uloc;
-		uloc = glGetUniformLocation(program, "color");			if (uloc > -1) glUniform4fv(uloc, 1, p.color);
-		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, model_matrix);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	}
-	glDisable(GL_BLEND);
-	b_particle = false;
-	glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
 	// swap front and back buffers, and display to screen
 	glfwSwapBuffers( window );
 }

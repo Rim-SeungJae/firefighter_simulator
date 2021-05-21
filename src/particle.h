@@ -55,12 +55,12 @@ inline void particle_t::update(GLuint prg, float dt)
 	*/
 	pos += velocity*dwTime;
 
-	life -= dwTime;
+	life -= 5.0f * dwTime;
 	// disappear
 	if (life < 0.0f)
 	{
 		constexpr float alpha_factor = 0.001f;
-		alpha_val -= dwTime;
+		alpha_val -= 5.0f * dwTime;
 		glUniform1f(glGetUniformLocation(program, "alpha_val"), alpha_val);
 	}
 	// dead

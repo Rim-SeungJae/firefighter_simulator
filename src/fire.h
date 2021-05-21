@@ -5,18 +5,21 @@
 #include "wall.h"
 #include "cgut.h"
 #include "cgmath.h"
+#include "particle.h"
 
 inline vec3 random_pos() 
 { 
 	float x = rand() % 40 - 19.5f;
 	float y = rand() % 40 - 19.5f;
-	return vec3(x,y,0.5f); 
+	return vec3(x,y,0.05f); 
 }
 
 struct fire_t
 {
 	vec3	center = vec3(0);		// 2D position for translation
-	float	size = 0.5f;		// radius
+	float	size = 0.5f;
+
+	std::vector<particle_t> particles;
 
 	mat4	model_matrix;		// modeling transformation
 
@@ -33,15 +36,20 @@ inline std::vector<fire_t> create_fires(int N, std::vector<wall_t> walls)
 	{
 		vec3 pos = random_pos();
 		float size = 0.5f;
+		bool cont_flag = false;
 		for (auto& w : walls)
 		{
 			if (w.center.x - w.width<pos.x + size && w.center.x + w.width > pos.x - size && w.center.y + w.length > pos.y - size && w.center.y - w.length < pos.y + size)
 			{
+				printf("hi");
 				i--;
-				continue;
+				cont_flag = true;
+				break;
 			}
 		}
+		if (cont_flag) continue;
 		t = { pos };
+		t.particles.resize(particle_t::MAX_PARTICLES);
 		fires.emplace_back(t);
 	}
 	return fires;
