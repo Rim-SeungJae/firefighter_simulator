@@ -7,11 +7,11 @@
 #include "cgmath.h"
 #include "particle.h"
 
-inline vec3 random_pos() 
-{ 
+inline vec3 random_pos()
+{
 	float x = rand() % 40 - 19.5f;
 	float y = rand() % 40 - 19.5f;
-	return vec3(x,y,0.05f); 
+	return vec3(x, y, 0.05f);
 }
 
 struct fire_t
@@ -41,7 +41,6 @@ inline std::vector<fire_t> create_fires(int N, std::vector<wall_t> walls)
 		{
 			if (w.center.x - w.width<pos.x + size && w.center.x + w.width > pos.x - size && w.center.y + w.length > pos.y - size && w.center.y - w.length < pos.y + size)
 			{
-				printf("hi");
 				i--;
 				cont_flag = true;
 				break;

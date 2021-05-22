@@ -1,10 +1,10 @@
 #include "cgmath.h"		// slee's simple math library
-#include "trackball.h"	// virtual trackball
-#include "floor.h"
-#include "character.h"
-#include "wall.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "cgut.h"		// slee's OpenGL utility
+#include "trackball.h"	// virtual trackball
+#include "floor.h"
+#include "wall.h"
+#include "character.h"
 #include "particle.h"
 #include "fire.h"
 #include "circle.h"
@@ -30,7 +30,8 @@ static const char*  up_image_path = "../bin/images/up.jpg";
 static const char*  down_image_path = "../bin/images/down.jpg";
 static const char*	floor_image_path = "../bin/images/floor.jpg";
 static const char*	wall_image_path = "../bin/images/wall.jpg";
-static const char* water_image_path = "../bin/images/water.jpg";
+static const char*	water_image_path = "../bin/images/water.jpg";
+static const char*	npc_image_path = "../bin/images/npc.jpg";
 
 static const char* mp3_path = "../bin/sounds/theme.mp3";
 static const char* mp3_path_water = "../bin/sounds/water.mp3";
@@ -73,11 +74,13 @@ GLuint	FIRE = 0;
 GLuint	UP = 0;
 GLuint	DOWN = 0;
 GLuint	WATER = 0;
+GLuint	NPC = 0;
 
 //*************************************
 // global variables
 int		frame = 0;				// index of rendering frames
 int		n_fire = 30;
+int		n_npc = 3;
 float	t = 0.0f;						// current simulation parameter
 float	dt = 0.0f;
 float	dx = 0.0f;
@@ -93,6 +96,7 @@ auto	floors = std::move(create_floors());
 auto	characters = std::move(create_characters());
 auto	walls = std::move(create_walls());
 auto	fires = std::move(create_fires(n_fire,walls));
+auto	npcs = std::move(create_npcs(3,walls));
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
 bool b_particle = false;
@@ -136,6 +140,17 @@ void update()
 		if (!(*it).alive)
 		{
 			it = circles.erase(it);
+		}
+		else
+		{
+			it++;
+		}
+	}
+	for (std::vector<character_t>::iterator it = npcs.begin(); it != npcs.end();)
+	{
+		if ((*it).saved)
+		{
+			it = npcs.erase(it);
 		}
 		else
 		{
@@ -200,12 +215,12 @@ void render()
 	for (auto& c : characters)
 	{
 		c.update(dt, walls);
-		
+		/*
 		cam.eye = characters[0].center;
 		cam.eye.z = 10;
 		cam.at = characters[0].center;
 		cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
-		
+		*/
 		if (c.look_at == 0 || c.look_at == 1)
 		{
 			glActiveTexture(GL_TEXTURE0);
@@ -224,6 +239,22 @@ void render()
 			glBindTexture(GL_TEXTURE_2D, UP);
 			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
 		}
+
+		GLint uloc;
+		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
+
+		// per-circle draw calls
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+	}
+
+	for (auto& c : npcs)
+	{
+		c.update_npc(dt, walls, characters, fires);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, NPC);
+		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+		
 
 		GLint uloc;
 		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
@@ -678,6 +709,7 @@ bool user_init()
 	UP = cg_create_texture(up_image_path, true); if (!UP) return false;
 	DOWN = cg_create_texture(down_image_path, true); if (!DOWN) return false;
 	WATER = cg_create_texture(water_image_path, true); if (!WATER) return false;
+	NPC = cg_create_texture(npc_image_path, true); if (!NPC) return false;
 
 	static vertex vertices[] = { {vec3(-1,-1,0),vec3(0,0,1),vec2(0,0)}, {vec3(1,-1,0),vec3(0,0,1),vec2(1,0)}, {vec3(-1,1,0),vec3(0,0,1),vec2(0,1)}, {vec3(1,1,0),vec3(0,0,1),vec2(1,1)} }; // strip ordering [0, 1, 3, 2]
 
