@@ -10,7 +10,7 @@ struct character_t
 	float	size = 0.5f;		// radius
 	vec4	color;				// RGBA color in [0,1]
 	float	velocity = 5.0f;
-	bool	look_right = true;
+	int		look_at = 0;
 	bool	move_up=false;
 	bool	move_left=false;
 	bool	move_right=false;
@@ -84,7 +84,7 @@ inline void character_t::update(float dt, std::vector<wall_t> walls)
 	};
 
 	model_matrix = translate_matrix * scale_matrix;
-	if (look_right == false)
+	if (look_at == 1)
 	{
 		model_matrix = translate_matrix * rotation_matrix * scale_matrix;
 	}
