@@ -363,7 +363,7 @@ void render()
 			cam.eye.z = 10;
 			cam.at = characters[0].center;
 			cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
-
+			*/
 			glUniform1i(glGetUniformLocation(program, "b_character"), true);
 
 			if (c.look_at == 0 || c.look_at == 1)
