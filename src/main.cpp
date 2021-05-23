@@ -39,6 +39,7 @@ static const char*	water_image_path = "../bin/images/water.jpg";
 static const char*	npc_image_path = "../bin/images/npc.jpg";
 static const char*	help_image_path = "../bin/images/help.jpg";
 static const char*	sky_image_path = "../bin/images/sky.jpg";
+static const char*	title_image_path = "../bin/images/title.jpg";
 
 static const char* mp3_path = "../bin/sounds/theme.mp3";
 static const char* mp3_path_water = "../bin/sounds/water.mp3";
@@ -85,21 +86,28 @@ GLuint	WATER = 0;
 GLuint	NPC = 0;
 GLuint	HELP = 0;
 GLuint	SKY = 0;
+GLuint	TITLE = 0;
 
 //*************************************
 // global variables
 int		frame = 0;				// index of rendering frames
+int		difficulty;
 int		n_fire = 30;
 int		n_npc = 3;
 float	t = 0.0f;						// current simulation parameter
 float	dt = 0.0f;
 float	dx = 0.0f;
 float	dy = 0.0f;
+float	easy_a = 1.0f;
+float	normal_a = 1.0f;
+float	hard_a = 1.0f;
 dvec2	pos;
 bool	b_time = false;
 int		color_type = 0;
 bool	b_rotate = true;
 bool	b_help = false;
+bool	b_title = true;
+bool	b_difficulty = false;
 #ifndef GL_ES_VERSION_2_0
 bool	b_wireframe = false;
 #endif
@@ -107,7 +115,7 @@ auto	floors = std::move(create_floors());
 auto	characters = std::move(create_characters());
 auto	walls = std::move(create_walls());
 auto	fires = std::move(create_fires(n_fire,walls));
-auto	npcs = std::move(create_npcs(3,walls));
+auto	npcs = std::move(create_npcs(n_npc,walls));
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
 float	a = 0.0f;
@@ -213,26 +221,21 @@ void render()
 
 	// notify GL that we use our own program
 	glUseProgram( program );
-	
-	float dpi_scale = cg_get_dpi_scale();
-	a = abs(sin(float(glfwGetTime()) * 2.5f));
-	//render_text("Hello text!", 100, 100, 1.0f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
-	//render_text("I love Computer Graphics!", 100, 125, 0.5f, vec4(0.7f, 0.4f, 0.1f, 0.8f), dpi_scale);
-	//render_text("Blinking text here", 100, 155, 0.6f, vec4(0.5f, 0.7f, 0.7f, a), dpi_scale);
 
 	// bind vertex array object
 	glBindVertexArray(vertex_array_square);
-	if (b_help)
+
+	if (b_title)
 	{
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, HELP);
+		glBindTexture(GL_TEXTURE_2D, TITLE);
 		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
 
 		mat4 scale_matrix =
 		{
-			1.2f, 0, 0, 0,
-			0, 0.8f, 0, 0,
-			0, 0, 0.8f, 0,
+			1.0f, 0, 0, 0,
+			0, 1.0f, 0, 0,
+			0, 0, 1.0f, 0,
 			0, 0, 0, 1
 		};
 
@@ -243,191 +246,229 @@ void render()
 
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
 	}
-
-	glUniform1i(glGetUniformLocation(program, "b_help"), false);
-	
-	for (auto& f : floors)
+	else if (!b_difficulty)
 	{
-		f.update();
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, FLOOR);
-		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-
-		GLint uloc;
-		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, f.model_matrix);
-
-		// per-circle draw calls
-		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+		float dpi_scale = cg_get_dpi_scale();
+		render_text("Easy: 30 fires 1 rescue target", window_size.x/2, window_size.y/4, 0.5f, vec4(0.5f, 0.8f, 0.2f, easy_a), dpi_scale);
+		render_text("Normal: 50 fires 2 rescue target", window_size.x / 2, window_size.y / 4*2, 0.5f, vec4(0.5f, 0.8f, 0.2f, normal_a), dpi_scale);
+		render_text("Hard: 70 fires 3 rescue target", window_size.x / 2, window_size.y / 4*3, 0.5f, vec4(0.5f, 0.8f, 0.2f, hard_a), dpi_scale);
 	}
-
-	for (auto& c : characters)
+	else
 	{
-		c.update(dt, walls);
-		
-		cam.eye = characters[0].center;
-		cam.eye.z = 10;
-		cam.at = characters[0].center;
-		cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
-		
-		if (c.look_at == 0 || c.look_at == 1)
+		if (b_help)
 		{
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, CHARACTER);
+			glBindTexture(GL_TEXTURE_2D, HELP);
 			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-		}
-		else if (c.look_at == 2)
-		{
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, DOWN);
-			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-		}
-		else
-		{
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, UP);
-			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-		}
 
-		GLint uloc;
-		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
+			mat4 scale_matrix =
+			{
+				1.2f, 0, 0, 0,
+				0, 0.8f, 0, 0,
+				0, 0, 0.8f, 0,
+				0, 0, 0, 1
+			};
 
-		// per-circle draw calls
-		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
-	}
-
-	for (auto& c : npcs)
-	{
-		c.update_npc(dt, walls, characters, fires);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, NPC);
-		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-		
-
-		GLint uloc;
-		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
-
-		// per-circle draw calls
-		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
-	}
-
-	for (auto& f : fires)
-	{
-		glBindVertexArray(vertex_array_square);
-		f.update();
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, FIRE);
-		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-
-		GLint uloc;
-		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, f.model_matrix);
-
-		// per-circle draw calls
-		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
-		
-		b_particle = true;	glBindVertexArray(vertex_array);
-		
-		for (auto& p : f.particles)
-		{
-			p.update(program, dt);
-
-			mat4 translate_matrix = mat4::translate(vec3(p.pos.x, p.pos.y, 0.06f));
-			mat4 scale_matrix = mat4::scale(p.scale);
-			mat4 translate_matrix_2 = mat4::translate(vec3(f.center.x, f.center.y, 0));
-			mat4 model_matrix = translate_matrix_2 * translate_matrix * scale_matrix;
-
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, FLAME);
-			glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
+			glUniform1i(glGetUniformLocation(program, "b_help"), true);
 
 			GLint uloc;
-			uloc = glGetUniformLocation(program, "color");			if (uloc > -1) glUniform4fv(uloc, 1, p.color);
-			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, model_matrix);
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-			
-		}
-		b_particle = false;
-		glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
-	}
+			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, scale_matrix);
 
-	glBindVertexArray(vertex_array_cube);
-	
-	for (auto& w : walls)
-	{
-		w.update();
+			glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+		}
+
+		glUniform1i(glGetUniformLocation(program, "b_help"), false);
+
+		for (auto& f : floors)
+		{
+			f.update();
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, FLOOR);
+			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+			GLint uloc;
+			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, f.model_matrix);
+
+			// per-circle draw calls
+			glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+		}
+
+		for (auto& c : characters)
+		{
+			c.update(dt, walls);
+
+			cam.eye = characters[0].center;
+			cam.eye.z = 10;
+			cam.at = characters[0].center;
+			cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
+
+			if (c.look_at == 0 || c.look_at == 1)
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, CHARACTER);
+				glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+			}
+			else if (c.look_at == 2)
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, DOWN);
+				glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+			}
+			else
+			{
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, UP);
+				glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+			}
+
+			GLint uloc;
+			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
+
+			// per-circle draw calls
+			glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+		}
+
+		for (auto& c : npcs)
+		{
+			c.update_npc(dt, walls, characters, fires);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, NPC);
+			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+
+			GLint uloc;
+			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
+
+			// per-circle draw calls
+			glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+		}
+
+		for (auto& f : fires)
+		{
+			glBindVertexArray(vertex_array_square);
+			f.update();
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, FIRE);
+			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+			GLint uloc;
+			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, f.model_matrix);
+
+			// per-circle draw calls
+			glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+
+			b_particle = true;	glBindVertexArray(vertex_array);
+
+			for (auto& p : f.particles)
+			{
+				p.update(program, dt);
+
+				mat4 translate_matrix = mat4::translate(vec3(p.pos.x, p.pos.y, 0.06f));
+				mat4 scale_matrix = mat4::scale(p.scale);
+				mat4 translate_matrix_2 = mat4::translate(vec3(f.center.x, f.center.y, 0));
+				mat4 model_matrix = translate_matrix_2 * translate_matrix * scale_matrix;
+
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, FLAME);
+				glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
+
+				GLint uloc;
+				uloc = glGetUniformLocation(program, "color");			if (uloc > -1) glUniform4fv(uloc, 1, p.color);
+				uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, model_matrix);
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+			}
+			b_particle = false;
+			glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
+		}
+
+		glBindVertexArray(vertex_array_cube);
+
+		for (auto& w : walls)
+		{
+			w.update();
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, WALL);
+			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+			GLint uloc;
+			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, w.model_matrix);
+
+			// per-circle draw calls
+			glDrawElements(GL_TRIANGLES, 12 * 3, GL_UNSIGNED_INT, nullptr);
+		}
+
+		glBindVertexArray(vertex_array_sphere);
+
+		for (auto& c : circles)
+		{
+			int after_sound = 0;
+			c.update(dt, &fires, walls, &after_sound);
+
+			if (after_sound == 1)
+			{
+				engine->play2D(mp3_src_water, false);
+			}
+			else if (after_sound == 2)
+			{
+				engine->play2D(mp3_src_sizzle, false);
+			}
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, WATER);
+			glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+			GLint uloc;
+			uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
+
+			// per-circle draw calls
+			glDrawElements(GL_TRIANGLES, 35 * 72 * 6, GL_UNSIGNED_INT, nullptr);
+		}
+
+		//draw skysphere
+
+		glBindVertexArray(vertex_array_sky_sphere);
+
+		mat4 scale_matrix_sky =
+		{
+			100.0f, 0, 0, 0,
+			0, 100.0f, 0, 0,
+			0, 0, 100.0f, 0,
+			0, 0, 0, 1
+		};
+		mat4 symmetry_matrix_sky =
+		{
+			1.0f, 0, 0, 0,
+			0, -1.0f, 0, 0,
+			0, 0, -1.0f, 0,
+			0, 0, 0, 1
+		};
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, WALL);
+		glBindTexture(GL_TEXTURE_2D, SKY);
 		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
 
 		GLint uloc;
-		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, w.model_matrix);
-
-		// per-circle draw calls
-		glDrawElements(GL_TRIANGLES, 12 * 3, GL_UNSIGNED_INT, nullptr);
-	}
-
-	glBindVertexArray(vertex_array_sphere);
-
-	for (auto& c : circles)
-	{
-		int after_sound = 0;
-		c.update(dt, &fires, walls, &after_sound);
-
-		if (after_sound == 1)
-		{
-			engine->play2D(mp3_src_water, false);
-		}
-		else if (after_sound == 2)
-		{
-			engine->play2D(mp3_src_sizzle, false);
-		}
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, WATER);
-		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-
-		GLint uloc;
-		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, c.model_matrix);
-
+		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, scale_matrix_sky * symmetry_matrix_sky);
 		// per-circle draw calls
 		glDrawElements(GL_TRIANGLES, 35 * 72 * 6, GL_UNSIGNED_INT, nullptr);
+
+
+		// text
+		float dpi_scale = cg_get_dpi_scale();
+		a = abs(sin(float(glfwGetTime()) * 2.5f));
+		render_text("Remain Time: ", 100, 100, 0.5f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
+		render_text("Remain People: ", 100, 125, 0.5f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
+		render_text(std::to_string(npcs.size()), 300, 125, 0.5f, vec4(0.5f, 0.8f, 1.0f, 1.0f), dpi_scale);
+		render_text("Remain Fire: ", 100, 150, 0.5f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
+		render_text(std::to_string(fires.size()), 300, 150, 0.5f, vec4(0.5f, 0.8f, 1.0f, 1.0f), dpi_scale);
+
+		glUseProgram(program);
 	}
-
-	//draw skysphere
-	
-	glBindVertexArray(vertex_array_sky_sphere);
-
-	mat4 scale_matrix_sky =
-	{
-		100.0f, 0, 0, 0,
-		0, 100.0f, 0, 0,
-		0, 0, 100.0f, 0,
-		0, 0, 0, 1
-	};
-	mat4 symmetry_matrix_sky =
-	{
-		1.0f, 0, 0, 0,
-		0, -1.0f, 0, 0,
-		0, 0, -1.0f, 0,
-		0, 0, 0, 1
-	};
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, SKY);
-	glUniform1i(glGetUniformLocation(program, "TEX"), 0);
-
-	GLint uloc;
-	uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, scale_matrix_sky*symmetry_matrix_sky);
-
-	// per-circle draw calls
-	glDrawElements(GL_TRIANGLES, 35 * 72 * 6, GL_UNSIGNED_INT, nullptr);
-
-
-	render_text("Hello text!", 100, 100, 1.0f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
-	glUseProgram(program);
 	
 
 	// swap front and back buffers, and display to screen
@@ -733,51 +774,77 @@ void update_vertex_buffer_sky_sphere(const std::vector<vertex>& vertices)
 	if (!vertex_array_sky_sphere) { printf("%s(): failed to create vertex aray\n", __func__); return; }
 }
 
+void reset()
+{
+	floors = std::move(create_floors());
+	characters = std::move(create_characters());
+	walls = std::move(create_walls());
+	fires = std::move(create_fires(n_fire, walls));
+	npcs = std::move(create_npcs(n_npc, walls));
+}
+
 void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 {
 	if(action==GLFW_PRESS)
 	{
-		if(key==GLFW_KEY_ESCAPE||key==GLFW_KEY_Q)	glfwSetWindowShouldClose( window, GL_TRUE );
-		else if(key==GLFW_KEY_H||key==GLFW_KEY_F1)	print_help();
-		else if(key==GLFW_KEY_HOME)					cam=camera();
-		else if (key == GLFW_KEY_D)
+		if (b_title) b_title = false;
+		else
 		{
-			color_type = (color_type + 1) % 3;
-			printf("> using color type: %d \n", color_type);
-		}
-		else if (key == GLFW_KEY_W)
-		{
-			b_wireframe = !b_wireframe;
-			glPolygonMode(GL_FRONT_AND_BACK, b_wireframe ? GL_LINE : GL_FILL);
-			printf("> using %s mode\n", b_wireframe ? "wireframe" : "solid");
-		}
-		else if (key == GLFW_KEY_PAUSE)
-		{
-			b_rotate = !b_rotate;
-			printf("> rotate %s\n", b_rotate ? "start" : "stop");
-		}
-		else if (key == GLFW_KEY_RIGHT)
-		{
-			characters[0].look_at = 0;
-			characters[0].move_right = true;
-		}
-		else if (key == GLFW_KEY_LEFT)
-		{
-			characters[0].look_at = 1;
-			characters[0].move_left = true;
-		}
-		else if (key == GLFW_KEY_DOWN)
-		{
-			characters[0].look_at = 2;
-			characters[0].move_down = true;
-		}
-		else if (key == GLFW_KEY_UP)
-		{
-			characters[0].look_at = 3;
-			characters[0].move_up = true;
+			if (key == GLFW_KEY_ESCAPE || key == GLFW_KEY_Q)	glfwSetWindowShouldClose(window, GL_TRUE);
+			else if (key == GLFW_KEY_HOME)					cam = camera();
+			else if (key == GLFW_KEY_D)
+			{
+				color_type = (color_type + 1) % 3;
+				printf("> using color type: %d \n", color_type);
+			}
+			else if (key == GLFW_KEY_W)
+			{
+				b_wireframe = !b_wireframe;
+				glPolygonMode(GL_FRONT_AND_BACK, b_wireframe ? GL_LINE : GL_FILL);
+				printf("> using %s mode\n", b_wireframe ? "wireframe" : "solid");
+			}
+			else if (key == GLFW_KEY_PAUSE)
+			{
+				b_rotate = !b_rotate;
+				printf("> rotate %s\n", b_rotate ? "start" : "stop");
+			}
+			else if (key == GLFW_KEY_RIGHT)
+			{
+				characters[0].look_at = 0;
+				characters[0].move_right = true;
+			}
+			else if (key == GLFW_KEY_LEFT)
+			{
+				characters[0].look_at = 1;
+				characters[0].move_left = true;
+			}
+			else if (key == GLFW_KEY_DOWN)
+			{
+				characters[0].look_at = 2;
+				characters[0].move_down = true;
+			}
+			else if (key == GLFW_KEY_UP)
+			{
+				characters[0].look_at = 3;
+				characters[0].move_up = true;
+			}
+			else if (key == GLFW_KEY_SPACE)
+			{
+				circle_t* c = new circle_t(characters[0].look_at, characters[0].center);
+				circles.push_back(*c);
+			}
+			else if (key == GLFW_KEY_F1)
+			{
+				b_help = !b_help;
+			}
+			else if (key == GLFW_KEY_R)
+			{
+				b_title = true;
+				b_difficulty = false;
+			}
 		}
 	}
-	else if (action == GLFW_RELEASE)
+	else if (action == GLFW_RELEASE&&!b_title)
 	{
 		if (key == GLFW_KEY_RIGHT)
 		{
@@ -795,20 +862,12 @@ void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 		{
 			characters[0].move_up = false;
 		}
-		else if (key == GLFW_KEY_SPACE)
-		{
-			circle_t * c = new circle_t(characters[0].look_at, characters[0].center);
-			circles.push_back(*c);
-		}
-		else if (key == GLFW_KEY_F1)
-		{
-			b_help = !b_help;
-		}
 	}
 }
 
 void mouse( GLFWwindow* window, int button, int action, int mods )
 {
+	/*
 	if(button==GLFW_MOUSE_BUTTON_LEFT|| button == GLFW_MOUSE_BUTTON_RIGHT||button==GLFW_MOUSE_BUTTON_MIDDLE)
 	{
 		dvec2 pos; glfwGetCursorPos(window,&pos.x,&pos.y);
@@ -818,6 +877,48 @@ void mouse( GLFWwindow* window, int button, int action, int mods )
 	}
 	tb.button = button;
 	tb.mods = mods;
+	*/
+	if (button == GLFW_MOUSE_BUTTON_LEFT)
+	{
+		if (!b_title&&!b_difficulty)
+		{
+			bool b_selected = false;
+			dvec2 pos; glfwGetCursorPos(window, &pos.x, &pos.y);
+			vec2 npos = cursor_to_ndc(pos, window_size);
+
+			if (pos.y > window_size.y / 5 && pos.y < window_size.y / 5 * 2 && action==GLFW_PRESS)
+			{
+				difficulty = 0;
+				n_fire = 30;
+				n_npc = 1;
+				b_selected = true;
+				easy_a = 0.5f;
+				reset();
+			}
+			if (pos.y > window_size.y / 5*2 && pos.y < window_size.y / 5 * 3 && action == GLFW_PRESS)
+			{
+				difficulty = 1;
+				n_fire = 50;
+				n_npc = 2;
+				b_selected = true;
+				normal_a = 0.5f;
+				reset();
+			}
+			if (pos.y > window_size.y / 5*3 && pos.y < window_size.y / 5 * 4&& action==GLFW_PRESS)
+			{
+				difficulty = 2;
+				n_fire = 70;
+				n_npc = 3;
+				b_selected = true;
+				hard_a = 0.5f;
+				reset();
+			}
+			if (action == GLFW_RELEASE)
+			{
+				b_difficulty = true;
+			}
+		}
+	}
 }
 
 void motion( GLFWwindow* window, double x, double y )
@@ -839,7 +940,8 @@ bool user_init()
 
 	// init GL states
 	glLineWidth(1.0f);
-	glClearColor( 39/255.0f, 40/255.0f, 34/255.0f, 1.0f );	// set clear color
+	//glClearColor( 39/255.0f, 40/255.0f, 34/255.0f, 1.0f );	// set clear color
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);	// set clear color
 	glEnable( GL_CULL_FACE );								// turn on backface culling
 	glEnable( GL_DEPTH_TEST );								// turn on depth tests
 	glEnable(GL_TEXTURE_2D);								// enable texturing
@@ -870,6 +972,7 @@ bool user_init()
 	NPC = cg_create_texture(npc_image_path, true); if (!NPC) return false;
 	HELP = cg_create_texture(help_image_path, true); if (!HELP) return false;
 	SKY = cg_create_texture(sky_image_path, true); if (!SKY) return false;
+	TITLE = cg_create_texture(title_image_path, true); if (!TITLE) return false;
 
 	static vertex vertices[] = { {vec3(-1,-1,0),vec3(0,0,1),vec2(0,0)}, {vec3(1,-1,0),vec3(0,0,1),vec2(1,0)}, {vec3(-1,1,0),vec3(0,0,1),vec2(0,1)}, {vec3(1,1,0),vec3(0,0,1),vec2(1,1)} }; // strip ordering [0, 1, 3, 2]
 

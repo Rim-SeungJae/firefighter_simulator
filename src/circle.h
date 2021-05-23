@@ -28,7 +28,7 @@ struct circle_t
 inline void circle_t::reset(int look_at, vec3 c_center)
 {
 	center = c_center;
-	center.z = 0.6f;
+	center.z = 0.51f;
 	switch (look_at)
 	{
 		case 0:

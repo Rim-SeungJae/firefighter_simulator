@@ -54,7 +54,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cubemaps.cpp" />
     <ClCompile Include="gl\glad\glad.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="text.cpp" />
@@ -71,8 +70,6 @@
     <ClInclude Include="fire.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\bin\shaders\cubemaps.frag" />
-    <None Include="..\bin\shaders\cubemaps.vert" />
     <None Include="..\bin\shaders\text.frag" />
     <None Include="..\bin\shaders\text.vert" />
     <None Include="..\bin\shaders\trackball.frag" />
