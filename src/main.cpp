@@ -38,6 +38,7 @@ static const char*	wall_image_path = "../bin/images/wall.jpg";
 static const char*	water_image_path = "../bin/images/water.jpg";
 static const char*	npc_image_path = "../bin/images/npc.jpg";
 static const char*	help_image_path = "../bin/images/help.jpg";
+static const char*	sky_image_path = "../bin/images/sky.jpg";
 
 static const char* mp3_path = "../bin/sounds/theme.mp3";
 static const char* mp3_path_water = "../bin/sounds/water.mp3";
@@ -72,6 +73,7 @@ GLuint	ring_vertex_array = 0;
 GLuint	vertex_array_square = 0;
 GLuint	vertex_array_cube = 0;
 GLuint	vertex_array_sphere = 0;
+GLuint	vertex_array_sky_sphere = 0;
 GLuint	CHARACTER = 0;
 GLuint	FLOOR = 0;
 GLuint	WALL = 0;
@@ -82,6 +84,7 @@ GLuint	DOWN = 0;
 GLuint	WATER = 0;
 GLuint	NPC = 0;
 GLuint	HELP = 0;
+GLuint	SKY = 0;
 
 //*************************************
 // global variables
@@ -132,6 +135,7 @@ std::vector<vertex> unit_ring_vertices;
 std::vector<vertex>	unit_square_vertices;	// host-side vertices
 std::vector<vertex>	unit_cube_vertices;	// host-side vertices
 std::vector<vertex> unit_sphere_vertices;
+std::vector<vertex> unit_sky_sphere_vertices;
 std::vector<particle_t> particles;
 std::vector<circle_t> circles;
 
@@ -398,8 +402,39 @@ void render()
 		glDrawElements(GL_TRIANGLES, 35 * 72 * 6, GL_UNSIGNED_INT, nullptr);
 	}
 
+	//draw skysphere
+	
+	glBindVertexArray(vertex_array_sky_sphere);
+
+	mat4 scale_matrix_sky =
+	{
+		100.0f, 0, 0, 0,
+		0, 100.0f, 0, 0,
+		0, 0, 100.0f, 0,
+		0, 0, 0, 1
+	};
+	mat4 symmetry_matrix_sky =
+	{
+		1.0f, 0, 0, 0,
+		0, -1.0f, 0, 0,
+		0, 0, -1.0f, 0,
+		0, 0, 0, 1
+	};
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, SKY);
+	glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+	GLint uloc;
+	uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, scale_matrix_sky*symmetry_matrix_sky);
+
+	// per-circle draw calls
+	glDrawElements(GL_TRIANGLES, 35 * 72 * 6, GL_UNSIGNED_INT, nullptr);
+	
+
 	// swap front and back buffers, and display to screen
 	glfwSwapBuffers( window );
+	
 }
 
 void reshape( GLFWwindow* window, int width, int height )
@@ -626,6 +661,80 @@ void update_vertex_buffer_sphere(const std::vector<vertex>& vertices)
 	if (!vertex_array_sphere) { printf("%s(): failed to create vertex aray\n", __func__); return; }
 }
 
+std::vector<vertex> create_sky_sphere_vertices()
+{
+	std::vector<vertex> v = {};
+	for (uint i = 0; i <= 36; i++)
+	{
+		float theta = PI * i / 36.0f, c_theta = cos(theta), s_theta = sin(theta);
+		for (uint j = 0; j <= 72; j++)
+		{
+			float phi = PI * 2.0f * j / 72.0f, c_phi = cos(phi), s_phi = sin(phi);
+			v.push_back({ vec3(s_theta * c_phi,s_theta * s_phi,c_theta), vec3(-(s_theta * c_phi),-(s_theta * s_phi),-c_theta), vec2(phi / 2.0f / PI,1.0f - theta / PI) });
+		}
+		//float t=PI*2.0f*k/float(N), c=cos(t), s=sin(t);
+	}
+	return v;
+}
+
+void update_vertex_buffer_sky_sphere(const std::vector<vertex>& vertices)
+{
+	static GLuint vertex_buffer = 0;	// ID holder for vertex buffer
+	static GLuint index_buffer = 0;		// ID holder for index buffer
+
+	// clear and create new buffers
+	if (vertex_buffer)	glDeleteBuffers(1, &vertex_buffer);	vertex_buffer = 0;
+	if (index_buffer)	glDeleteBuffers(1, &index_buffer);	index_buffer = 0;
+
+	// check exceptions
+	if (vertices.empty()) { printf("[error] vertices is empty.\n"); return; }
+
+	// create buffers
+
+	std::vector<uint> indices;
+	/*
+	for( uint k=0; k < N; k++ )
+	{
+		indices.push_back(0);	// the origin
+		indices.push_back(k+1);
+		indices.push_back(k+2);
+	}
+	*/
+	for (uint i = 0; i < 36; i++)
+	{
+		for (uint j = 0; j < 72; j++)
+		{
+			if (i != 0)
+			{
+				indices.push_back(i * (72 + 1) + j);
+				indices.push_back(i * (72 + 1) + 1 + j);
+				indices.push_back(i * (72 + 1) + (72 + 1) + j);
+			}
+			if (i != 35)
+			{
+				indices.push_back(i * (72 + 1) + 1 + j);
+				indices.push_back(i * (72 + 1) + (72 + 1) + 1 + j);
+				indices.push_back(i * (72 + 1) + (72 + 1) + j);
+			}
+		}
+	}
+
+	// generation of vertex buffer: use vertices as it is
+	glGenBuffers(1, &vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+
+	// geneation of index buffer
+	glGenBuffers(1, &index_buffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint) * indices.size(), &indices[0], GL_STATIC_DRAW);
+
+	// generate vertex array object, which is mandatory for OpenGL 3.3 and higher
+	if (vertex_array_sky_sphere) glDeleteVertexArrays(1, &vertex_array_sky_sphere);
+	vertex_array_sky_sphere = cg_create_vertex_array(vertex_buffer, index_buffer);
+	if (!vertex_array_sky_sphere) { printf("%s(): failed to create vertex aray\n", __func__); return; }
+}
+
 void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 {
 	if(action==GLFW_PRESS)
@@ -745,11 +854,13 @@ bool user_init()
 	unit_square_vertices = std::move(create_square_vertices());
 	unit_cube_vertices = std::move(create_cube_vertices());
 	unit_sphere_vertices = std::move(create_sphere_vertices());
+	unit_sky_sphere_vertices = std::move(create_sky_sphere_vertices());
 
 	// create vertex buffer; called again when index buffering mode is toggled
 	update_vertex_buffer_square(unit_square_vertices);
 	update_vertex_buffer_cube(unit_cube_vertices);
 	update_vertex_buffer_sphere(unit_sphere_vertices);
+	update_vertex_buffer_sky_sphere(unit_sky_sphere_vertices);
 
 	// load texture
 	FLOOR = cg_create_texture(floor_image_path, true); if (!FLOOR) return false;
@@ -761,6 +872,8 @@ bool user_init()
 	WATER = cg_create_texture(water_image_path, true); if (!WATER) return false;
 	NPC = cg_create_texture(npc_image_path, true); if (!NPC) return false;
 	HELP = cg_create_texture(help_image_path, true); if (!HELP) return false;
+	SKY = cg_create_texture(sky_image_path, true); if (!SKY) return false;
+
 	static vertex vertices[] = { {vec3(-1,-1,0),vec3(0,0,1),vec2(0,0)}, {vec3(1,-1,0),vec3(0,0,1),vec2(1,0)}, {vec3(-1,1,0),vec3(0,0,1),vec2(0,1)}, {vec3(1,1,0),vec3(0,0,1),vec2(1,1)} }; // strip ordering [0, 1, 3, 2]
 
 	// generation of vertex buffer: use vertices as it is
