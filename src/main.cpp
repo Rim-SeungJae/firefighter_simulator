@@ -30,13 +30,13 @@ static const Srand sr;
 static const char*	window_name = "cgbase - trackball";
 static const char*	vert_shader_path = "../bin/shaders/trackball.vert";
 static const char*	frag_shader_path = "../bin/shaders/trackball.frag";
-static const char*  character_image_path = "../bin/images/character.jpg";
-static const char*  up_image_path = "../bin/images/up.jpg";
-static const char*  down_image_path = "../bin/images/down.jpg";
+static const char*  character_image_path = "../bin/images/character.png";
+static const char*  up_image_path = "../bin/images/up.png";
+static const char*  down_image_path = "../bin/images/down.png";
 static const char*	floor_image_path = "../bin/images/floor.jpg";
 static const char*	wall_image_path = "../bin/images/wall.jpg";
 static const char*	water_image_path = "../bin/images/water.jpg";
-static const char*	npc_image_path = "../bin/images/npc.jpg";
+static const char*	npc_image_path = "../bin/images/npc.png";
 static const char*	help_image_path = "../bin/images/help.jpg";
 static const char*	sky_image_path = "../bin/images/sky.jpg";
 static const char*	title_image_path = "../bin/images/title.jpg";
@@ -229,6 +229,7 @@ void update()
 
 void render()
 {
+	float dpi_scale = cg_get_dpi_scale();
 	// clear screen (with background color) and clear depth buffer
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
@@ -258,6 +259,11 @@ void render()
 		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, scale_matrix);
 
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+
+		// =============================
+		a = abs(sin(float(glfwGetTime()) * 2.5f));
+		render_text("Press Any Key", window_size.x / 3, window_size.y / 4 * 3, 0.5f, vec4(0.5f, 0.8f, 0.2f, a), dpi_scale);
+		glUseProgram(program);
 	}
 	else if (!b_difficulty)
 	{
@@ -357,7 +363,9 @@ void render()
 			cam.eye.z = 10;
 			cam.at = characters[0].center;
 			cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
-			*/
+
+			glUniform1i(glGetUniformLocation(program, "b_character"), true);
+
 			if (c.look_at == 0 || c.look_at == 1)
 			{
 				glActiveTexture(GL_TEXTURE0);
@@ -439,7 +447,7 @@ void render()
 			b_particle = false;
 			glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
 		}
-
+		glUniform1i(glGetUniformLocation(program, "b_character"), false);
 		glBindVertexArray(vertex_array_cube);
 
 		for (auto& w : walls)
@@ -514,8 +522,6 @@ void render()
 
 
 		// text
-		float dpi_scale = cg_get_dpi_scale();
-		a = abs(sin(float(glfwGetTime()) * 2.5f));
 		render_text("Remain Time: ", 100, 100, 0.5f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
 		render_text(std::to_string(time_limit-glfwGetTime()+t0), 300, 100, 0.5f, vec4(0.5f, 0.8f, 1.0f, 1.0f), dpi_scale);
 		render_text("Remain People: ", 100, 125, 0.5f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
