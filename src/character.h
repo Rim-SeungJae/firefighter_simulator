@@ -12,7 +12,7 @@ struct character_t
 {
 	vec3	center = vec3(0);		// 2D position for translation
 	float	size = 0.5f;		// radius
-	float	velocity = 5.0f;
+	float	velocity = 6.0f;
 	int		look_at = 0;
 	bool	move_up=false;
 	bool	move_left=false;
@@ -31,17 +31,34 @@ struct character_t
 	void	update_npc(float dt, std::vector<wall_t> walls, std::vector<character_t> characters, std::vector<fire_t> fires);
 };
 
-inline std::vector<character_t> create_characters()
+inline std::vector<character_t> create_characters(std::vector<wall_t> walls)
 {
 	std::vector<character_t> characters;
 	character_t t;
 
 	t = { vec3(2.0f,2.0f,0.1f),0.5f };
-	characters.emplace_back(t);
+	for (int i = 0; i < 1; i++)
+	{
+		vec3 pos = random_pos();
+		float size = 0.5f;
+		bool cont_flag = false;
+		for (auto& w : walls)
+		{
+			if (w.center.x - w.width<pos.x + size && w.center.x + w.width > pos.x - size && w.center.y + w.length > pos.y - size && w.center.y - w.length < pos.y + size)
+			{
+				i--;
+				cont_flag = true;
+				break;
+			}
+		}
+		if (cont_flag) continue;
+		t = { pos, size };
+		characters.emplace_back(t);
+	}
 	return characters;
 }
 
-inline std::vector<character_t> create_npcs(int N, std::vector<wall_t> walls)
+inline std::vector<character_t> create_npcs(int N, std::vector<wall_t> walls, std::vector<fire_t> fires)
 {
 	std::vector<character_t> npcs;
 	character_t t;
@@ -54,6 +71,15 @@ inline std::vector<character_t> create_npcs(int N, std::vector<wall_t> walls)
 		for (auto& w : walls)
 		{
 			if (w.center.x - w.width<pos.x + size && w.center.x + w.width > pos.x - size && w.center.y + w.length > pos.y - size && w.center.y - w.length < pos.y + size)
+			{
+				i--;
+				cont_flag = true;
+				break;
+			}
+		}
+		for (auto& w : fires)
+		{
+			if (w.center.x - w.size<pos.x + size && w.center.x + w.size > pos.x - size && w.center.y + w.size > pos.y - size && w.center.y - w.size < pos.y + size)
 			{
 				i--;
 				cont_flag = true;

@@ -32,16 +32,16 @@ inline void circle_t::reset(int look_at, vec3 c_center)
 	switch (look_at)
 	{
 		case 0:
-			velocity = vec3(5.0f, 0.0f, 3.0f);
+			velocity = vec3(6.0f, 0.0f, 3.0f);
 			break;
 		case 1:
-			velocity = vec3(-5.0f, 0.0f, 3.0f);
+			velocity = vec3(-6.0f, 0.0f, 3.0f);
 			break;
 		case 2:
-			velocity = vec3(0.0f, -5.0f, 3.0f);
+			velocity = vec3(0.0f, -6.0f, 3.0f);
 			break;
 		case 3:
-			velocity = vec3(0.0f, 5.0f, 3.0f);
+			velocity = vec3(0.0f, 6.0f, 3.0f);
 			break;
 	}
 }

@@ -40,12 +40,13 @@ static const char*	npc_image_path = "../bin/images/npc.png";
 static const char*	help_image_path = "../bin/images/help.jpg";
 static const char*	sky_image_path = "../bin/images/sky.jpg";
 static const char*	title_image_path = "../bin/images/title.jpg";
-static const char* over_image_path = "../bin/images/game_over.jpg";
-static const char* clear_image_path = "../bin/images/game_clear.jpg";
+static const char*  over_image_path = "../bin/images/game_over.jpg";
+static const char*  clear_image_path = "../bin/images/game_clear.jpg";
 
 static const char* mp3_path = "../bin/sounds/theme.mp3";
 static const char* mp3_path_water = "../bin/sounds/water.mp3";
 static const char* mp3_path_sizzle = "../bin/sounds/sizzle.mp3";
+static const char* mp3_path_saved = "../bin/sounds/saved.mp3";
 
 struct light_t
 {
@@ -98,7 +99,7 @@ int		frame = 0;				// index of rendering frames
 int		difficulty;
 int		n_fire = 30;
 int		n_npc = 3;
-float	time_limit;
+float	time_limit=10;
 float	t0;
 float	t = 0.0f;						// current simulation parameter
 float	dt = 0.0f;
@@ -116,14 +117,15 @@ bool	b_title = true;
 bool	b_difficulty = false;
 bool	b_game_over = false;
 bool	b_game_clear = false;
+bool	b_free_cam = false;
 #ifndef GL_ES_VERSION_2_0
 bool	b_wireframe = false;
 #endif
 auto	floors = std::move(create_floors());
-auto	characters = std::move(create_characters());
 auto	walls = std::move(create_walls());
+auto	characters = std::move(create_characters(walls));
 auto	fires = std::move(create_fires(n_fire,walls));
-auto	npcs = std::move(create_npcs(n_npc,walls));
+auto	npcs = std::move(create_npcs(n_npc,walls,fires));
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
 float	a = 0.0f;
@@ -135,6 +137,7 @@ irrklang::ISoundEngine* engine = nullptr;
 irrklang::ISoundSource* mp3_src = nullptr;
 irrklang::ISoundSource* mp3_src_water = nullptr;
 irrklang::ISoundSource* mp3_src_sizzle = nullptr;
+irrklang::ISoundSource* mp3_src_saved = nullptr;
 
 //*************************************
 // scene objects
@@ -180,6 +183,7 @@ void update()
 		if ((*it).saved)
 		{
 			it = npcs.erase(it);
+			engine->play2D(mp3_src_saved, false);
 		}
 		else
 		{
@@ -358,12 +362,16 @@ void render()
 		for (auto& c : characters)
 		{
 			c.update(dt, walls);
-			/*
-			cam.eye = characters[0].center;
-			cam.eye.z = 10;
-			cam.at = characters[0].center;
-			cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
-			*/
+			
+			if (!b_free_cam)
+			{
+				cam.eye.x = characters[0].center.x;
+				cam.eye.y = characters[0].center.y;
+				cam.at = characters[0].center;
+				cam.up = vec3(0, 1, 0);
+				cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
+			}
+			
 			glUniform1i(glGetUniformLocation(program, "b_character"), true);
 
 			if (c.look_at == 0 || c.look_at == 1)
@@ -551,9 +559,11 @@ void print_help()
 	printf( "[help]\n" );
 	printf( "- press ESC or 'q' to terminate the program\n" );
 	printf( "- press F1 or 'h' to see help\n" );
-	printf( "- press Home to reset camera\n" );
-	printf("- press 'd' to change color type\n");
-	printf("- press 'w' to toggle wireframe\n");
+	printf("- use arrow keys to move\n");
+	printf("- press space bar to throw water bomb\n");
+	printf("- camera follows your character. However, press 'f' to activate/deactivate free camera mode.\n-In free camera mode, you can rotate, pan, zoom the camera using mouse left, middle, right button\n");
+	printf("- you can only zoom when you are not in free camera mode.\n");
+	//printf("- press 'w' to toggle wireframe\n");
 	printf( "\n" );
 }
 
@@ -838,11 +848,15 @@ void update_vertex_buffer_sky_sphere(const std::vector<vertex>& vertices)
 
 void reset()
 {
+	cam = camera();
+	b_game_over = false;
+	b_game_clear = false;
+	t0 = (float)glfwGetTime();
 	floors = std::move(create_floors());
-	characters = std::move(create_characters());
 	walls = std::move(create_walls());
+	characters = std::move(create_characters(walls));
 	fires = std::move(create_fires(n_fire, walls));
-	npcs = std::move(create_npcs(n_npc, walls));
+	npcs = std::move(create_npcs(n_npc, walls,fires));
 }
 
 void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
@@ -854,22 +868,14 @@ void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 		{
 			if (key == GLFW_KEY_ESCAPE || key == GLFW_KEY_Q)	glfwSetWindowShouldClose(window, GL_TRUE);
 			else if (key == GLFW_KEY_HOME)					cam = camera();
-			else if (key == GLFW_KEY_D)
-			{
-				color_type = (color_type + 1) % 3;
-				printf("> using color type: %d \n", color_type);
-			}
+			/*
 			else if (key == GLFW_KEY_W)
 			{
 				b_wireframe = !b_wireframe;
 				glPolygonMode(GL_FRONT_AND_BACK, b_wireframe ? GL_LINE : GL_FILL);
 				printf("> using %s mode\n", b_wireframe ? "wireframe" : "solid");
 			}
-			else if (key == GLFW_KEY_PAUSE)
-			{
-				b_rotate = !b_rotate;
-				printf("> rotate %s\n", b_rotate ? "start" : "stop");
-			}
+			*/
 			else if (key == GLFW_KEY_RIGHT)
 			{
 				characters[0].look_at = 0;
@@ -906,6 +912,10 @@ void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 				easy_a = 1.0f;
 				normal_a = 1.0f;
 				hard_a = 1.0f;
+			}
+			else if (key == GLFW_KEY_F)
+			{
+				b_free_cam = !b_free_cam;
 			}
 		}
 	}
@@ -959,38 +969,29 @@ void mouse( GLFWwindow* window, int button, int action, int mods )
 				b_selected = true;
 				easy_a = 0.5f;
 				circles.clear();
-				time_limit = 10.0f;
-				b_game_over = false;
-				b_game_clear = false;
-				t0 = (float)glfwGetTime();
+				time_limit = 240.0f;
 				reset();
 			}
 			if (pos.y > window_size.y / 5*2 && pos.y < window_size.y / 5 * 3 && action == GLFW_PRESS)
 			{
 				difficulty = 1;
 				n_fire = 50;
-				n_npc = 2;
+				n_npc = 3;
 				b_selected = true;
 				normal_a = 0.5f;
 				circles.clear();
-				time_limit = 60.0f;
-				b_game_over = false;
-				b_game_clear = false;
-				t0 = (float)glfwGetTime();
+				time_limit = 210.0f;
 				reset();
 			}
 			if (pos.y > window_size.y / 5*3 && pos.y < window_size.y / 5 * 4&& action==GLFW_PRESS)
 			{
 				difficulty = 2;
 				n_fire = 70;
-				n_npc = 3;
+				n_npc = 5;
 				b_selected = true;
 				hard_a = 0.5f;
 				circles.clear();
-				time_limit = 60.0f;
-				b_game_over = false;
-				b_game_clear = false;
-				t0 = (float)glfwGetTime();
+				time_limit = 180.0f;
 				reset();
 			}
 			if (action == GLFW_RELEASE)
@@ -1005,11 +1006,11 @@ void motion( GLFWwindow* window, double x, double y )
 {
 	if(!tb.is_tracking()) return;
 	vec2 npos = cursor_to_ndc( dvec2(x,y), window_size );
-	if (tb.button == GLFW_MOUSE_BUTTON_LEFT && tb.mods == 0)
+	if (tb.button == GLFW_MOUSE_BUTTON_LEFT && tb.mods == 0 && b_free_cam)
 		tb.update(npos);
 	else if (tb.button == GLFW_MOUSE_BUTTON_RIGHT || (tb.button == GLFW_MOUSE_BUTTON_LEFT && (tb.mods & GLFW_MOD_SHIFT)))
 		tb.update_zoom(npos);
-	else if (tb.button == GLFW_MOUSE_BUTTON_MIDDLE || (tb.button == GLFW_MOUSE_BUTTON_LEFT && (tb.mods & GLFW_MOD_CONTROL)))
+	else if ((tb.button == GLFW_MOUSE_BUTTON_MIDDLE || (tb.button == GLFW_MOUSE_BUTTON_LEFT && (tb.mods & GLFW_MOD_CONTROL)))&&b_free_cam)
 		tb.update_pan(npos);
 }
 
@@ -1078,13 +1079,14 @@ bool user_init()
 	mp3_src = engine->addSoundSourceFromFile(mp3_path);
 	mp3_src_water = engine->addSoundSourceFromFile(mp3_path_water);
 	mp3_src_sizzle = engine->addSoundSourceFromFile(mp3_path_sizzle);
+	mp3_src_saved = engine->addSoundSourceFromFile(mp3_path_saved);
 	//set default volume
 	mp3_src->setDefaultVolume(0.5f);
 	mp3_src_water->setDefaultVolume(0.2f);
 	mp3_src_sizzle->setDefaultVolume(0.2f);
+	mp3_src_saved->setDefaultVolume(0.5f);
 	//play the sound file
 	engine->play2D(mp3_src, true);
-	printf("> playing %s\n", "mp3");
 
 	// setup freetype
 	if (!init_text()) return false;

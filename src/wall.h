@@ -40,6 +40,7 @@ inline std::vector<wall_t> create_walls()
 	}
 	for (float i = -18.5f; i <= 0.0f; i++)
 	{
+		if (i>-11 && i<-9) continue;
 		w = { vec3(i,-0.5f,1.0f) };
 		walls.emplace_back(w);
 	}
