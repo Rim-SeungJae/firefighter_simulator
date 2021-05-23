@@ -18,13 +18,12 @@ uniform mat4	view_matrix;
 uniform float	shininess;
 uniform vec4	light_position, Ia, Id, Is;	// light
 uniform vec4	Ka, Kd, Ks;					// material properties
-uniform bool	b_sun;
-uniform bool	b_ring;
 // particle
 uniform bool	b_particle;
 uniform vec4	color;
 uniform float	alpha_val;
-uniform bool	b_fire;
+
+uniform bool	b_help;
 
 uniform sampler2D TEX;
 uniform sampler2D alpha;
@@ -49,8 +48,8 @@ void main()
 	vec3 h = normalize(l+v);	// the halfway vector
 
 	vec4 iKd=texture(TEX,tc);
-	fragColor = phong( l, n, h, iKd );
-	if(b_fire) fragColor.a = iKd.a;
+	if(b_help) fragColor = iKd;
+	else fragColor = phong( l, n, h, iKd );
 
 	if(b_particle)
 	{
