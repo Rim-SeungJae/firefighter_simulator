@@ -22,7 +22,7 @@ uniform bool	b_particle;
 uniform vec4	color;
 uniform float	alpha_val;
 uniform bool	b_fire;
-
+uniform bool	b_character;
 uniform bool	b_help;
 
 uniform sampler2D TEX;
@@ -55,4 +55,11 @@ void main()
 		fragColor = texture( TEX, tc ); if(fragColor.a < 0.001) discard;
 		fragColor.a = alpha_val;
 	}
+
+	else if(b_character)
+	{
+		fragColor = texture( TEX, tc );
+		if (fragColor.a < 0.1)	discard;
+	}
+
 }
