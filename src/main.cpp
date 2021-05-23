@@ -40,6 +40,8 @@ static const char*	npc_image_path = "../bin/images/npc.jpg";
 static const char*	help_image_path = "../bin/images/help.jpg";
 static const char*	sky_image_path = "../bin/images/sky.jpg";
 static const char*	title_image_path = "../bin/images/title.jpg";
+static const char* over_image_path = "../bin/images/game_over.jpg";
+static const char* clear_image_path = "../bin/images/game_clear.jpg";
 
 static const char* mp3_path = "../bin/sounds/theme.mp3";
 static const char* mp3_path_water = "../bin/sounds/water.mp3";
@@ -87,6 +89,8 @@ GLuint	NPC = 0;
 GLuint	HELP = 0;
 GLuint	SKY = 0;
 GLuint	TITLE = 0;
+GLuint	GAME_OVER = 0;
+GLuint	GAME_CLEAR = 0;
 
 //*************************************
 // global variables
@@ -94,6 +98,8 @@ int		frame = 0;				// index of rendering frames
 int		difficulty;
 int		n_fire = 30;
 int		n_npc = 3;
+float	time_limit;
+float	t0;
 float	t = 0.0f;						// current simulation parameter
 float	dt = 0.0f;
 float	dx = 0.0f;
@@ -108,6 +114,8 @@ bool	b_rotate = true;
 bool	b_help = false;
 bool	b_title = true;
 bool	b_difficulty = false;
+bool	b_game_over = false;
+bool	b_game_clear = false;
 #ifndef GL_ES_VERSION_2_0
 bool	b_wireframe = false;
 #endif
@@ -181,6 +189,11 @@ void update()
 	light.position = vec4(cam.eye, 1.0f);
 	// update global simulation parameter
 	t = float(glfwGetTime()) * 0.4f;
+	if (!b_game_clear && !b_game_over &&b_difficulty)
+	{
+		if (fires.size() == 0 && npcs.size() == 0) b_game_clear = true;
+		if (time_limit - glfwGetTime() + t0 < 0) b_game_over = true;
+	}
 
 	// update projection matrix
 	cam.aspect = window_size.x/float(window_size.y);
@@ -249,9 +262,51 @@ void render()
 	else if (!b_difficulty)
 	{
 		float dpi_scale = cg_get_dpi_scale();
-		render_text("Easy: 30 fires 1 rescue target", window_size.x/2, window_size.y/4, 0.5f, vec4(0.5f, 0.8f, 0.2f, easy_a), dpi_scale);
-		render_text("Normal: 50 fires 2 rescue target", window_size.x / 2, window_size.y / 4*2, 0.5f, vec4(0.5f, 0.8f, 0.2f, normal_a), dpi_scale);
-		render_text("Hard: 70 fires 3 rescue target", window_size.x / 2, window_size.y / 4*3, 0.5f, vec4(0.5f, 0.8f, 0.2f, hard_a), dpi_scale);
+		render_text("Easy", window_size.x/2, window_size.y/4, 0.5f, vec4(0.5f, 0.8f, 0.2f, easy_a), dpi_scale);
+		render_text("Normal", window_size.x / 2, window_size.y / 4*2, 0.5f, vec4(0.5f, 0.8f, 0.2f, normal_a), dpi_scale);
+		render_text("Hard", window_size.x / 2, window_size.y / 4*3, 0.5f, vec4(0.5f, 0.8f, 0.2f, hard_a), dpi_scale);
+	}
+	else if (b_game_over)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, GAME_OVER);
+		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+		mat4 scale_matrix =
+		{
+			1.0f, 0, 0, 0,
+			0, 1.0f, 0, 0,
+			0, 0, 1.0f, 0,
+			0, 0, 0, 1
+		};
+
+		glUniform1i(glGetUniformLocation(program, "b_help"), true);
+
+		GLint uloc;
+		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, scale_matrix);
+
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+	}
+	else if (b_game_clear)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, GAME_CLEAR);
+		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+		mat4 scale_matrix =
+		{
+			1.0f, 0, 0, 0,
+			0, 1.0f, 0, 0,
+			0, 0, 1.0f, 0,
+			0, 0, 0, 1
+		};
+
+		glUniform1i(glGetUniformLocation(program, "b_help"), true);
+
+		GLint uloc;
+		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, scale_matrix);
+
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
 	}
 	else
 	{
@@ -297,12 +352,12 @@ void render()
 		for (auto& c : characters)
 		{
 			c.update(dt, walls);
-
+			/*
 			cam.eye = characters[0].center;
 			cam.eye.z = 10;
 			cam.at = characters[0].center;
 			cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
-
+			*/
 			if (c.look_at == 0 || c.look_at == 1)
 			{
 				glActiveTexture(GL_TEXTURE0);
@@ -462,6 +517,7 @@ void render()
 		float dpi_scale = cg_get_dpi_scale();
 		a = abs(sin(float(glfwGetTime()) * 2.5f));
 		render_text("Remain Time: ", 100, 100, 0.5f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
+		render_text(std::to_string(time_limit-glfwGetTime()+t0), 300, 100, 0.5f, vec4(0.5f, 0.8f, 1.0f, 1.0f), dpi_scale);
 		render_text("Remain People: ", 100, 125, 0.5f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
 		render_text(std::to_string(npcs.size()), 300, 125, 0.5f, vec4(0.5f, 0.8f, 1.0f, 1.0f), dpi_scale);
 		render_text("Remain Fire: ", 100, 150, 0.5f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
@@ -841,6 +897,9 @@ void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 			{
 				b_title = true;
 				b_difficulty = false;
+				easy_a = 1.0f;
+				normal_a = 1.0f;
+				hard_a = 1.0f;
 			}
 		}
 	}
@@ -867,7 +926,7 @@ void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 
 void mouse( GLFWwindow* window, int button, int action, int mods )
 {
-	/*
+	
 	if(button==GLFW_MOUSE_BUTTON_LEFT|| button == GLFW_MOUSE_BUTTON_RIGHT||button==GLFW_MOUSE_BUTTON_MIDDLE)
 	{
 		dvec2 pos; glfwGetCursorPos(window,&pos.x,&pos.y);
@@ -877,7 +936,7 @@ void mouse( GLFWwindow* window, int button, int action, int mods )
 	}
 	tb.button = button;
 	tb.mods = mods;
-	*/
+	
 	if (button == GLFW_MOUSE_BUTTON_LEFT)
 	{
 		if (!b_title&&!b_difficulty)
@@ -893,6 +952,11 @@ void mouse( GLFWwindow* window, int button, int action, int mods )
 				n_npc = 1;
 				b_selected = true;
 				easy_a = 0.5f;
+				circles.clear();
+				time_limit = 10.0f;
+				b_game_over = false;
+				b_game_clear = false;
+				t0 = (float)glfwGetTime();
 				reset();
 			}
 			if (pos.y > window_size.y / 5*2 && pos.y < window_size.y / 5 * 3 && action == GLFW_PRESS)
@@ -902,6 +966,11 @@ void mouse( GLFWwindow* window, int button, int action, int mods )
 				n_npc = 2;
 				b_selected = true;
 				normal_a = 0.5f;
+				circles.clear();
+				time_limit = 60.0f;
+				b_game_over = false;
+				b_game_clear = false;
+				t0 = (float)glfwGetTime();
 				reset();
 			}
 			if (pos.y > window_size.y / 5*3 && pos.y < window_size.y / 5 * 4&& action==GLFW_PRESS)
@@ -911,6 +980,11 @@ void mouse( GLFWwindow* window, int button, int action, int mods )
 				n_npc = 3;
 				b_selected = true;
 				hard_a = 0.5f;
+				circles.clear();
+				time_limit = 60.0f;
+				b_game_over = false;
+				b_game_clear = false;
+				t0 = (float)glfwGetTime();
 				reset();
 			}
 			if (action == GLFW_RELEASE)
@@ -973,6 +1047,8 @@ bool user_init()
 	HELP = cg_create_texture(help_image_path, true); if (!HELP) return false;
 	SKY = cg_create_texture(sky_image_path, true); if (!SKY) return false;
 	TITLE = cg_create_texture(title_image_path, true); if (!TITLE) return false;
+	GAME_CLEAR = cg_create_texture(clear_image_path, true); if (!GAME_CLEAR) return false;
+	GAME_OVER = cg_create_texture(over_image_path, true); if (!GAME_OVER) return false;
 
 	static vertex vertices[] = { {vec3(-1,-1,0),vec3(0,0,1),vec2(0,0)}, {vec3(1,-1,0),vec3(0,0,1),vec2(1,0)}, {vec3(-1,1,0),vec3(0,0,1),vec2(0,1)}, {vec3(1,1,0),vec3(0,0,1),vec2(1,1)} }; // strip ordering [0, 1, 3, 2]
 
