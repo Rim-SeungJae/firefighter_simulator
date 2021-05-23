@@ -19,6 +19,11 @@ struct Srand
 	}
 };
 
+//*******************************************************************
+// forward declarations for freetype text
+bool init_text();
+void render_text(std::string text, GLint x, GLint y, GLfloat scale, vec4 color, GLfloat dpi_scale = 1.0f);
+
 //*************************************
 // global constants
 static const Srand sr;
@@ -99,6 +104,7 @@ auto	fires = std::move(create_fires(n_fire,walls));
 auto	npcs = std::move(create_npcs(3,walls));
 struct { bool add = false, sub = false; operator bool() const { return add || sub; } } b; // flags of keys for smooth changes
 
+float	a = 0.0f;
 bool b_particle = false;
 
 //*******************************************************************
@@ -192,6 +198,12 @@ void render()
 	// notify GL that we use our own program
 	glUseProgram( program );
 	
+	float dpi_scale = cg_get_dpi_scale();
+	a = abs(sin(float(glfwGetTime()) * 2.5f));
+	//render_text("Hello text!", 100, 100, 1.0f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
+	//render_text("I love Computer Graphics!", 100, 125, 0.5f, vec4(0.7f, 0.4f, 0.1f, 0.8f), dpi_scale);
+	//render_text("Blinking text here", 100, 155, 0.6f, vec4(0.5f, 0.7f, 0.7f, a), dpi_scale);
+
 	// bind vertex array object
 
 	glBindVertexArray(vertex_array_square);
@@ -740,6 +752,9 @@ bool user_init()
 	//play the sound file
 	engine->play2D(mp3_src, true);
 	printf("> playing %s\n", "mp3");
+
+	// setup freetype
+	if (!init_text()) return false;
 
 	return true;
 }

@@ -20,6 +20,12 @@
     <ClCompile Include="gl\glad\glad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="text.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cubemaps.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="trackball.h">
@@ -55,6 +61,18 @@
       <Filter>Shader Files</Filter>
     </None>
     <None Include="..\bin\shaders\trackball.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\bin\shaders\text.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\bin\shaders\text.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\bin\shaders\cubemaps.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\bin\shaders\cubemaps.vert">
       <Filter>Shader Files</Filter>
     </None>
   </ItemGroup>

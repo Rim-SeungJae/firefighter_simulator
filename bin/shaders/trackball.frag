@@ -25,6 +25,8 @@ uniform bool	b_particle;
 uniform vec4	color;
 uniform float	alpha_val;
 uniform bool	b_fire;
+// cube map
+uniform samplerCube skybox;
 
 uniform sampler2D TEX;
 uniform sampler2D alpha;
