@@ -12,13 +12,19 @@ out vec2 tc;	// texture coordinate
 uniform mat4 model_matrix;
 uniform mat4 view_matrix;
 uniform mat4 projection_matrix;
+uniform mat4 aspect_matrix;
+
+uniform bool b_help;
 
 void main()
 {
-	vec4 wpos = model_matrix * vec4(position,1);
-	epos = view_matrix * wpos;
-	gl_Position = projection_matrix * epos;
-
+	if(b_help) gl_Position =  aspect_matrix * model_matrix * vec4(position,1);
+	else
+	{
+		vec4 wpos = model_matrix * vec4(position,1);
+		epos = view_matrix * wpos;
+		gl_Position = projection_matrix * epos;
+	}
 	// pass eye-space normal and tc to fragment shader
 	norm = normalize(mat3(view_matrix*model_matrix)*normal);
 	tc = texcoord;

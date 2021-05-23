@@ -37,6 +37,7 @@ static const char*	floor_image_path = "../bin/images/floor.jpg";
 static const char*	wall_image_path = "../bin/images/wall.jpg";
 static const char*	water_image_path = "../bin/images/water.jpg";
 static const char*	npc_image_path = "../bin/images/npc.jpg";
+static const char*	help_image_path = "../bin/images/help.jpg";
 
 static const char* mp3_path = "../bin/sounds/theme.mp3";
 static const char* mp3_path_water = "../bin/sounds/water.mp3";
@@ -80,6 +81,7 @@ GLuint	UP = 0;
 GLuint	DOWN = 0;
 GLuint	WATER = 0;
 GLuint	NPC = 0;
+GLuint	HELP = 0;
 
 //*************************************
 // global variables
@@ -94,6 +96,7 @@ dvec2	pos;
 bool	b_time = false;
 int		color_type = 0;
 bool	b_rotate = true;
+bool	b_help = false;
 #ifndef GL_ES_VERSION_2_0
 bool	b_wireframe = false;
 #endif
@@ -171,12 +174,21 @@ void update()
 	cam.aspect = window_size.x/float(window_size.y);
 	cam.projection_matrix = mat4::perspective( cam.fovy, cam.aspect, cam.dnear, cam.dfar );
 
+	mat4 aspect_matrix =
+	{
+		std::min(1 / cam.aspect,1.0f), 0, 0, 0,
+		0, std::min(cam.aspect,1.0f), 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	};
+
 	// update uniform variables in vertex/fragment shaders
 	GLint uloc;
 	//uloc = glGetUniformLocation(program, "color_type");				if (uloc > -1) glUniform1i(uloc, color_type);
 	uloc = glGetUniformLocation( program, "view_matrix" );			if(uloc>-1) glUniformMatrix4fv( uloc, 1, GL_TRUE, cam.view_matrix );
 	uloc = glGetUniformLocation( program, "projection_matrix" );	if(uloc>-1) glUniformMatrix4fv( uloc, 1, GL_TRUE, cam.projection_matrix );
-	
+	uloc = glGetUniformLocation(program, "aspect_matrix");	if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, aspect_matrix);
+
 	// setup light properties
 	glUniform4fv(glGetUniformLocation(program, "light_position"), 1, light.position);
 	glUniform4fv(glGetUniformLocation(program, "Ia"), 1, light.ambient);
@@ -207,6 +219,29 @@ void render()
 	// bind vertex array object
 
 	glBindVertexArray(vertex_array_square);
+	if (b_help)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, HELP);
+		glUniform1i(glGetUniformLocation(program, "TEX"), 0);
+
+		mat4 scale_matrix =
+		{
+			1.2f, 0, 0, 0,
+			0, 0.8f, 0, 0,
+			0, 0, 0.8f, 0,
+			0, 0, 0, 1
+		};
+
+		glUniform1i(glGetUniformLocation(program, "b_help"), true);
+
+		GLint uloc;
+		uloc = glGetUniformLocation(program, "model_matrix");		if (uloc > -1) glUniformMatrix4fv(uloc, 1, GL_TRUE, scale_matrix);
+
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
+	}
+
+	glUniform1i(glGetUniformLocation(program, "b_help"), false);
 	
 	for (auto& f : floors)
 	{
@@ -222,17 +257,16 @@ void render()
 		// per-circle draw calls
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
 	}
-	
 
 	for (auto& c : characters)
 	{
 		c.update(dt, walls);
-		/*
+		
 		cam.eye = characters[0].center;
 		cam.eye.z = 10;
 		cam.at = characters[0].center;
 		cam.view_matrix = mat4::look_at(cam.eye, cam.at, cam.up);
-		*/
+		
 		if (c.look_at == 0 || c.look_at == 1)
 		{
 			glActiveTexture(GL_TEXTURE0);
@@ -659,6 +693,10 @@ void keyboard( GLFWwindow* window, int key, int scancode, int action, int mods )
 			circle_t * c = new circle_t(characters[0].look_at, characters[0].center);
 			circles.push_back(*c);
 		}
+		else if (key == GLFW_KEY_F1)
+		{
+			b_help = !b_help;
+		}
 	}
 }
 
@@ -722,7 +760,7 @@ bool user_init()
 	DOWN = cg_create_texture(down_image_path, true); if (!DOWN) return false;
 	WATER = cg_create_texture(water_image_path, true); if (!WATER) return false;
 	NPC = cg_create_texture(npc_image_path, true); if (!NPC) return false;
-
+	HELP = cg_create_texture(help_image_path, true); if (!HELP) return false;
 	static vertex vertices[] = { {vec3(-1,-1,0),vec3(0,0,1),vec2(0,0)}, {vec3(1,-1,0),vec3(0,0,1),vec2(1,0)}, {vec3(-1,1,0),vec3(0,0,1),vec2(0,1)}, {vec3(1,1,0),vec3(0,0,1),vec2(1,1)} }; // strip ordering [0, 1, 3, 2]
 
 	// generation of vertex buffer: use vertices as it is
