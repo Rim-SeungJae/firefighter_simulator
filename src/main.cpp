@@ -221,7 +221,6 @@ void render()
 	//render_text("Blinking text here", 100, 155, 0.6f, vec4(0.5f, 0.7f, 0.7f, a), dpi_scale);
 
 	// bind vertex array object
-
 	glBindVertexArray(vertex_array_square);
 	if (b_help)
 	{
@@ -328,9 +327,6 @@ void render()
 		// per-circle draw calls
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr);
 		
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		
 		b_particle = true;	glBindVertexArray(vertex_array);
 		
 		for (auto& p : f.particles)
@@ -352,8 +348,6 @@ void render()
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 			
 		}
-		
-		glDisable(GL_BLEND);
 		b_particle = false;
 		glUniform1i(glGetUniformLocation(program, "b_particle"), b_particle);
 	}
@@ -430,6 +424,10 @@ void render()
 
 	// per-circle draw calls
 	glDrawElements(GL_TRIANGLES, 35 * 72 * 6, GL_UNSIGNED_INT, nullptr);
+
+
+	render_text("Hello text!", 100, 100, 1.0f, vec4(0.5f, 0.8f, 0.2f, 1.0f), dpi_scale);
+	glUseProgram(program);
 	
 
 	// swap front and back buffers, and display to screen
@@ -845,9 +843,8 @@ bool user_init()
 	glEnable( GL_CULL_FACE );								// turn on backface culling
 	glEnable( GL_DEPTH_TEST );								// turn on depth tests
 	glEnable(GL_TEXTURE_2D);								// enable texturing
-	//glActiveTexture(GL_TEXTURE0);							// notify GL the current texture slot is 0
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
 	// define the position of four corner vertices
