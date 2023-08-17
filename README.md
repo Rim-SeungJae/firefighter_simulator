@@ -1,6 +1,7 @@
 <img src="https://img.shields.io/badge/C-A8B9CC?style=flat&logo=C&logoColor=white"/> <img src="https://img.shields.io/badge/C++-00599C?style=flat&logo=C++&logoColor=white"/> <img src="https://img.shields.io/badge/OpenGL-5586A4?style=flat&logo=OpenGL&logoColor=white"/>
 # firefighter_simulator
 This repository contains the team project of team '팀원이 세명이면 좋았을 걸' in SKKU's 2021 Introduction to Computer Graphics. The project developed a simple firefighter simulator game using OpenGL. The purpose of the game is to put out all the fires and save people in a given time.
+![cg5](https://github.com/dipreez/firefighter_simulator/assets/50349104/057987a2-8383-41f3-8bd2-78020e591b68)
 
 # Implemented features
 Our game is firefighter simulator 2D. The goal of this game is to turn off all the fires and
@@ -15,16 +16,20 @@ level will decide the number of fires, number of rescue targets, and the time li
 ### 3D shading
 Walls, and water bombs that character throws are implemented in 3D. They are shaded
 by the light and the light source position will be always same as the camera position.
+![cg6](https://github.com/dipreez/firefighter_simulator/assets/50349104/ecea86c9-fb0e-4761-8c9f-12fda28fc938)
 ### Resizable window and its constant aspect-ratio viewport
 Our game always allow window resizing and constant aspect-ratio viewport.
 ### Text rendering
 Difficulty selection, and information provided on the top left corner are implemented
 with text rendering.
+![cg7](https://github.com/dipreez/firefighter_simulator/assets/50349104/c256ee99-a5a8-4265-88bf-eba2d03d5518)
+![cg8](https://github.com/dipreez/firefighter_simulator/assets/50349104/60ef14e0-ae83-4852-8bd5-26aea1cc9564)
 ### Sound rendering
 There is a theme song that keeps playing as soon as the game starts. Sound effects
 occur when fires are extinguished, water bombs explode, or people are rescued.
 ### Textured 3D skysphere
 You can see the skysphere in the game.
+![cg9](https://github.com/dipreez/firefighter_simulator/assets/50349104/2e655ce3-7df5-4f31-8da8-5ded88b931fa)
 ### Dynamic 3D camera movement
 The camera follows your character movement by default and you can use zoom
 function with mouse right button. Also, you can activate/deactivate free-camera mode
@@ -41,10 +46,7 @@ The water bomb that character throws is affected by gravitational acceleration. 
 thrown diagonally upwards and starts to fall slowly.
 ### Moving 2D NPC
 There are NPCs(rescue targets) moving around the map. They try to avoid the fire.
-# Data structure and Algorithm
-Most of the data structures and algorithms used to implement the project such as creating
-vertices, applying textures, moving vertex positions, and so on were reused from
-assignments 1–4. Therefore, this report does not explain about them again.
+
 # Discussions
 As a result of implementation, the amount of declared global variables has become too
 large and it is not quite good to see. Several global variables seem be reusable without
