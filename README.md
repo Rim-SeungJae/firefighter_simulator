@@ -16,6 +16,7 @@ level will decide the number of fires, number of rescue targets, and the time li
 ### 3D shading
 Walls, and water bombs that character throws are implemented in 3D. They are shaded
 by the light and the light source position will be always same as the camera position.
+
 ![cg6](https://github.com/dipreez/firefighter_simulator/assets/50349104/ecea86c9-fb0e-4761-8c9f-12fda28fc938)
 ### Resizable window and its constant aspect-ratio viewport
 Our game always allow window resizing and constant aspect-ratio viewport.
