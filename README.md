@@ -53,3 +53,6 @@ As a result of implementation, the amount of declared global variables has becom
 large and it is not quite good to see. Several global variables seem be reusable without
 having to be newly defined, but there was not enough time to modify the code. There may
 be a way to refactor code more effectively.
+
+# Demo video
+https://www.dropbox.com/s/kvt57c04uoo6q69/2021_CG_T1_%ED%8C%80%EC%9B%90%EC%9D%B4-%EC%84%B8%EB%AA%85%EC%9D%B4%EB%A9%B4-%EC%A2%8B%EC%95%98%EC%9D%84-%EA%B1%B8.mp4?dl=0
