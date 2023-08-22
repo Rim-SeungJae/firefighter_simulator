@@ -56,3 +56,6 @@ be a way to refactor code more effectively.
 
 # Demo video
 https://www.dropbox.com/s/kvt57c04uoo6q69/2021_CG_T1_%ED%8C%80%EC%9B%90%EC%9D%B4-%EC%84%B8%EB%AA%85%EC%9D%B4%EB%A9%B4-%EC%A2%8B%EC%95%98%EC%9D%84-%EA%B1%B8.mp4?dl=0
+
+# How to run
+You can simply execute /bin/cgtrackball.exe file to run the game. Please enjoy!
